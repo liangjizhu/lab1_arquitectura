@@ -1,3 +1,7 @@
+# Ignorar directorios de compilación y CMake generados
+/cmake-build-debug/
+/cmake-build-release/
+/build/
+
+# Ignorar directorio de entrada específico si no es parte del código fuente
 input/
-/cmake-build-debug
-/cmake-build-release
