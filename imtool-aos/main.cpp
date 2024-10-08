@@ -3,7 +3,12 @@
 //
 #include <iostream>
 
-int main(){
-      std::cout << "test" << "\n";
-      return 0;
+int main(int argc, char* argv[]) {
+    // Evitar advertencias de parámetros no utilizados por ahora
+    (void)argc;
+    (void)argv;
+
+    // Tu código aquí
+
+    return 0;
 }
