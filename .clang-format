@@ -15,7 +15,7 @@ AlignConsecutiveBitFields:
     PadOperators: true
 AlignConsecutiveDeclarations: None
 AlignConsecutiveMacros: None
-AlignEscapedNewlines: Left
+AlignEscapedNewlines:  Left
 AlignOperands: Align
 AlignTrailingComments:
     Kind: Always

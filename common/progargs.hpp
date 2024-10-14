@@ -9,30 +9,29 @@
 #include <vector>
 
 class ProgramArgs {
-  public:
-  // Constructor que recibe los argumentos de la línea de comandos
-  ProgramArgs(int argc, char* argv[]);
+    public:
+    ProgramArgs(int argc, char* argv[]);
 
-  // Funciones para obtener cada uno de los argumentos
-  std::string getInputFile() const;
-  std::string getOutputFile() const;
-  std::string getOperation() const;
-  std::vector<std::string> getAdditionalParams() const;
+    bool validate() const;
+    std::string getInputFile() const;
+    std::string getOutputFile() const;
+    std::string getOperation() const;
+    int getMaxLevel() const;
+    int getResizeWidth() const;
+    int getResizeHeight() const;
+    int getCutFreq() const;
 
-  // Validar los argumentos
-  bool validate() const;
+    std::string getErrorMessage() const;
 
-  // Mostrar un mensaje de uso cuando los argumentos no son válidos
-  static void printUsage();
+    private:
+    std::vector<std::string> args;
+    std::string errorMessage;
 
-  private:
-  std::string inputFile;
-  std::string outputFile;
-  std::string operation;
-  std::vector<std::string> additionalParams;
-
-  bool valid;  // Bandera para verificar si los argumentos son válidos
+    bool validateInfo();
+    bool validateMaxLevel();
+    bool validateResize();
+    bool validateCutFreq();
+    bool validateCompress();
 };
 
 #endif // PROGARGS_HPP
-
