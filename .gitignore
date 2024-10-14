@@ -1,1 +1,29 @@
+# Ignorar directorios de compilación y CMake generados
+/cmake-build-debug/
+/cmake-build-release/
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+*.cmake
+
+# Ignorar directorio de entrada específico si no es parte del código fuente
 input/
+
+# Ignorar archivos de salida generados por CMake o Make
+Makefile
+*.o
+*.obj
+*.so
+*.a
+*.exe
+*.out
+*.log
+
+# Archivos de configuración de entornos de desarrollo
+.idea/
+.vscode/
+
+# Archivos temporales de sistema
+*.swp
+*~
+.DS_Store
