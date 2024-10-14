@@ -12,7 +12,7 @@ class ProgramArgs {
     public:
     ProgramArgs(int argc, char* argv[]);
 
-    bool validate() const;
+    bool validate();
     std::string getInputFile() const;
     std::string getOutputFile() const;
     std::string getOperation() const;

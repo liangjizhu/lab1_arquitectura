@@ -12,29 +12,30 @@ ProgramArgs::ProgramArgs(int argc, char* argv[]) {
     }
 }
 
-bool ProgramArgs::validate() const {
-    if (args.size() < 3) {
-        errorMessage = "Error: Invalid number of arguments";
-        return false;
-    }
+bool ProgramArgs::validate() {
+  if (args.size() < 3) {
+    errorMessage = "Error: Invalid number of arguments";
+    return false;
+  }
 
-    std::string operation = args[2];
+  const std::string& operation = args[2];
 
-    if (operation == "info") {
-        return validateInfo();
-    } else if (operation == "maxlevel") {
-        return validateMaxLevel();
-    } else if (operation == "resize") {
-        return validateResize();
-    } else if (operation == "cutfreq") {
-        return validateCutFreq();
-    } else if (operation == "compress") {
-        return validateCompress();
-    } else {
-        errorMessage = "Error: Invalid operation: " + operation;
-        return false;
-    }
+  if (operation == "info") {
+      return validateInfo();
+  } else if (operation == "maxlevel") {
+      return validateMaxLevel();
+  } else if (operation == "resize") {
+      return validateResize();
+  } else if (operation == "cutfreq") {
+      return validateCutFreq();
+  } else if (operation == "compress") {
+      return validateCompress();
+  } else {
+    errorMessage = std::string("Error: Invalid operation: ") + operation;  // Corrección aquí
+      return false;
+  }
 }
+
 
 bool ProgramArgs::validateInfo() {
     if (args.size() != 3) {

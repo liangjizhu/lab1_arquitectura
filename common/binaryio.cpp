@@ -18,7 +18,9 @@ std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
   std::streamsize size = file.tellg();
   file.seekg(0, std::ios::beg);
 
-  std::vector<uint8_t> buffer(size);
+  // Convertimos size a un tipo sin signo compatible con std::vector
+  std::vector<uint8_t> buffer(static_cast<std::vector<uint8_t>::size_type>(size));
+
   if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
     throw std::runtime_error("Error: Failed to read the file " + filename);
   }
@@ -34,7 +36,8 @@ void BinaryIO::writeBinaryFile(const std::string& filename, const std::vector<ui
     throw std::runtime_error("Error: Unable to open file " + filename + " for writing");
   }
 
-  if (!file.write(reinterpret_cast<const char*>(data.data()), data.size())) {
+  // Convertimos data.size() a std::streamsize de manera segura
+  if (!file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()))) {
     throw std::runtime_error("Error: Failed to write to file " + filename);
   }
 }
