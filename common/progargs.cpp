@@ -8,28 +8,30 @@
 
 ProgramArgs::ProgramArgs(int argc, char* argv[]) {
     for (int i = 0; i < argc; ++i) {
-        args.emplace_back(argv[i]);
+        args.push_back(argv[i]);
     }
 }
 
-bool ProgramArgs::validate() const {
-    if (args.size() < 3) {
+bool ProgramArgs::validate() {
+    if (args.size() < 2) {
         errorMessage = "Error: Invalid number of arguments";
         return false;
     }
 
-    std::string operation = args[2];
+    // El primer argumento es el nombre del programa, el segundo es el comando
+    operation = args[1];
 
-    if (operation == "info") {
-        return validateInfo();
-    } else if (operation == "maxlevel") {
-        return validateMaxLevel();
-    } else if (operation == "resize") {
-        return validateResize();
-    } else if (operation == "cutfreq") {
-        return validateCutFreq();
-    } else if (operation == "compress") {
-        return validateCompress();
+    // Validar el comando
+    if (operation == "info" || operation == "maxlevel" || operation == "resize" ||
+        operation == "cutfreq" || operation == "compress") {
+
+        // Validar si hay al menos un archivo de entrada
+        if (args.size() < 3) {
+            errorMessage = "Error: Missing input file for the operation: " + operation;
+            return false;
+        }
+        inputFile = args[2];
+        return true;
     } else {
         errorMessage = "Error: Invalid operation: " + operation;
         return false;
@@ -108,15 +110,15 @@ bool ProgramArgs::validateCompress() {
 }
 
 std::string ProgramArgs::getInputFile() const {
-    return args[1];
-}
-
-std::string ProgramArgs::getOutputFile() const {
-    return args[2];
+    return args[2];  // Cambiado a args[2] para el archivo de entrada
 }
 
 std::string ProgramArgs::getOperation() const {
-    return args[2];
+    return args[1];  // Cambiado a args[1] para el comando
+}
+
+std::string ProgramArgs::getErrorMessage() const {
+    return errorMessage;
 }
 
 int ProgramArgs::getMaxLevel() const {
@@ -133,8 +135,4 @@ int ProgramArgs::getResizeHeight() const {
 
 int ProgramArgs::getCutFreq() const {
     return std::stoi(args[3]);
-}
-
-std::string ProgramArgs::getErrorMessage() const {
-    return errorMessage;
 }

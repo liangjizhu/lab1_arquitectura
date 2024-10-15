@@ -12,9 +12,8 @@ class ProgramArgs {
     public:
     ProgramArgs(int argc, char* argv[]);
 
-    bool validate() const;
+    bool validate();
     std::string getInputFile() const;
-    std::string getOutputFile() const;
     std::string getOperation() const;
     int getMaxLevel() const;
     int getResizeWidth() const;
@@ -25,6 +24,8 @@ class ProgramArgs {
 
     private:
     std::vector<std::string> args;
+    std::string operation;
+    std::string inputFile;
     std::string errorMessage;
 
     bool validateInfo();
