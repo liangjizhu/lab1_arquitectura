@@ -1,10 +1,11 @@
 //
 // Created by liang on 4/10/24.
 //
-#include <iostream>
 
 #include "progargs.hpp"  // Incluir el manejo de argumentos
 #include "binaryio.hpp"  // Incluir el manejo de archivos binarios
+#include "imageaos.hpp"  // Incluir la lógica de imgaos
+
 #include <iostream>      // Para la salida estándar
 
 int main(int argc, char* argv[]) {
@@ -22,16 +23,23 @@ int main(int argc, char* argv[]) {
 
     try {
         if (command == "info") {
-            // Comando 'info': leer archivo y mostrar información
-            std::vector<uint8_t> data = BinaryIO::readBinaryFile(args.getInputFile());
-            std::cout << "File info: Size = " << data.size() << " bytes" << std::endl;
+            // Validar argumentos para 'info'
+            if (!args.validateInfo()) {
+                std::cerr << args.getErrorMessage() << std::endl;
+                return -1;  // Error en los argumentos para 'info'
+            }
+            // Llamada a la lógica de imgaos para 'info'
+            processInfo(args.getInputFile());
+            return 0;
 
         } else if (command == "maxlevel") {
-            // Comando 'maxlevel': establecer el nivel máximo
-            int maxLevel = args.getMaxLevel();
-            std::cout << "Setting max level to: " << maxLevel << std::endl;
-            // Aquí iría la lógica para aplicar el maxLevel al archivo
-
+            // Validar y procesar 'maxlevel'
+            if (!args.validateMaxLevel()) {
+                std::cerr << args.getErrorMessage() << std::endl;
+                return -1;
+            }
+            processMaxLevel(args.getInputFile(), args.getMaxLevel());
+            return 0;
         } else if (command == "resize") {
             // Comando 'resize': redimensionar el archivo
             int width = args.getResizeWidth();
@@ -61,5 +69,5 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    return 0;  // Todo se ejecutó correctamente
+    return 0;
 }

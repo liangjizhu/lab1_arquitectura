@@ -110,11 +110,11 @@ bool ProgramArgs::validateCompress() {
 }
 
 std::string ProgramArgs::getInputFile() const {
-    return args[2];  // Cambiado a args[2] para el archivo de entrada
+    return inputFile;
 }
 
 std::string ProgramArgs::getOperation() const {
-    return args[1];  // Cambiado a args[1] para el comando
+    return operation;
 }
 
 std::string ProgramArgs::getErrorMessage() const {
@@ -122,17 +122,37 @@ std::string ProgramArgs::getErrorMessage() const {
 }
 
 int ProgramArgs::getMaxLevel() const {
-    return std::stoi(args[3]);
+    try {
+        return std::stoi(args[3]);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: Invalid max level value: " << e.what() << std::endl;
+        return -1;
+    }
 }
 
 int ProgramArgs::getResizeWidth() const {
-    return std::stoi(args[3]);
+    try {
+        return std::stoi(args[3]);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: Invalid width value: " << e.what() << std::endl;
+        return -1;
+    }
 }
 
 int ProgramArgs::getResizeHeight() const {
-    return std::stoi(args[4]);
+    try {
+        return std::stoi(args[4]);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: Invalid height value: " << e.what() << std::endl;
+        return -1;
+    }
 }
 
 int ProgramArgs::getCutFreq() const {
-    return std::stoi(args[3]);
+    try {
+        return std::stoi(args[3]);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: Invalid cut frequency value: " << e.what() << std::endl;
+        return -1;
+    }
 }

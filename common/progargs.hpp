@@ -22,17 +22,20 @@ class ProgramArgs {
 
     std::string getErrorMessage() const;
 
-    private:
-    std::vector<std::string> args;
-    std::string operation;
-    std::string inputFile;
-    std::string errorMessage;
-
+    // Cambiar las funciones de validación a públicas
     bool validateInfo();
     bool validateMaxLevel();
     bool validateResize();
     bool validateCutFreq();
     bool validateCompress();
+
+    private:
+    std::vector<std::string> args;
+    std::string errorMessage;
+
+    // Agregar las variables faltantes
+    std::string operation;
+    std::string inputFile;
 };
 
 #endif // PROGARGS_HPP

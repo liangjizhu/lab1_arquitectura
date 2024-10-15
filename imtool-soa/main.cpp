@@ -60,5 +60,5 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    return 0;  // Todo se ejecutó correctamente
+    return 0;
 }
