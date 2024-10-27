@@ -8,7 +8,6 @@
 
 #include <string>
 
-void processInfo(const std::string& inputFile);
 void processMaxLevel(const std::string& inputFile, int maxLevel);
 // Otras funciones para 'resize', 'cutfreq', etc.
 

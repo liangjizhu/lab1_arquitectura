@@ -9,39 +9,9 @@
 #include <fstream>
 #include <cmath>
 #include <unordered_map>
-#include <array>
 #include <vector>
 #include <algorithm>
-
-void processInfo(const std::string& inputFile) {
-    std::ifstream file(inputFile, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open input file: " << inputFile << std::endl;
-        return;
-    }
-
-    std::string format;
-    int width, height, maxColorValue;
-
-    // Leer el formato de la imagen (e.g., P3 o P6 para PPM)
-    file >> format;
-    if (format != "P3" && format != "P6") {
-        std::cerr << "Error: Unsupported PPM format. Only P3 and P6 are supported." << std::endl;
-        return;
-    }
-
-    // Leer ancho, alto y valor máximo de color
-    file >> width >> height >> maxColorValue;
-
-    // Mostrar metadatos de la imagen
-    std::cout << "File: " << inputFile << std::endl;
-    std::cout << "Format: " << format << std::endl;
-    std::cout << "Width: " << width << std::endl;
-    std::cout << "Height: " << height << std::endl;
-    std::cout << "Max Color Value: " << maxColorValue << std::endl;
-
-    file.close();
-}
+#include <string>
 
 void processMaxLevel(const std::string& inputFile, int maxLevel) {
     // Lógica para el comando 'maxlevel'
@@ -50,8 +20,6 @@ void processMaxLevel(const std::string& inputFile, int maxLevel) {
 }
 
 // TODO
-
-
 //ELIMINACIÓN DE COLORES POCO FRECUENTES
 
     //ESTAMOS EN AOS -> ARRAY OF STRUCTS
@@ -73,7 +41,7 @@ void processMaxLevel(const std::string& inputFile, int maxLevel) {
 //Y UN VECTOR LLAMADO ArrayOfColors QUE CONTIENE TODOS LOS COLORES DE LA IMAGEN
 
 
-// COLOR IMPLEMENTADO EN COLOR.HPP
+// ******* COLOR IMPLEMENTADO EN COLOR.HPP *******
 //FUNCIÓN PARA CALCULAR LA DISTANCIA EUCLÍDEA
 double distancia_euclidiana(const Color& c1, const Color& c2) {
     return std::sqrt(std::pow(c1.red - c2.red, 2) +

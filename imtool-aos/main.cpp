@@ -2,11 +2,12 @@
 // Created by liang on 4/10/24.
 //
 
-#include "progargs.hpp"  // Incluir el manejo de argumentos
-#include "binaryio.hpp"  // Incluir el manejo de archivos binarios
-#include "imageaos.hpp"  // Incluir la lógica de imgaos
+#include "progargs.hpp"    // Incluir el manejo de argumentos
+#include "binaryio.hpp"    // Incluir el manejo de archivos binarios
+#include "imageinfo.hpp"   // Incluir la lógica de processInfo desde common
+#include "imageaos.hpp"    // Incluir la lógica de imgaos
 
-#include <iostream>      // Para la salida estándar
+#include <iostream>        // Para la salida estándar
 
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
@@ -28,7 +29,7 @@ int main(int argc, char* argv[]) {
                 std::cerr << args.getErrorMessage() << std::endl;
                 return -1;  // Error en los argumentos para 'info'
             }
-            // Llamada a la lógica de imgaos para 'info'
+            // Llamada a processInfo desde common
             processInfo(args.getInputFile());
             return 0;
 
