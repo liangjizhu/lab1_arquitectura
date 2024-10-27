@@ -5,6 +5,7 @@
 #include "binaryio.hpp"
 #include <fstream>
 #include <stdexcept>
+#include <cstdint>
 
 // Lee un archivo binario y devuelve su contenido como un vector de bytes
 std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {

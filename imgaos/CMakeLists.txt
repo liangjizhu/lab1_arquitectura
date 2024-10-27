@@ -2,6 +2,8 @@
 add_library(imgaos
         imageaos.cpp
         imageaos.hpp
+        color.hpp
+        color.cpp
 )
 
 # Use this line only if you have dependencies from this library to GSL
