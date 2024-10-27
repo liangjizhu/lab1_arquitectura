@@ -7,10 +7,12 @@
 #define IMAGEAOS_HPP
 
 #include "binaryio.hpp"
+#include "color.hpp"
 
 #include <string>
 
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
+void compressAoS(const std::string& inputFile, const std::string& outputFile);
 // Otras funciones para 'resize', 'cutfreq', etc.
 
 #endif // IMAGEAOS_HPP

@@ -4,7 +4,6 @@
 
 #include "imageaos.hpp"
 #include "binaryio.hpp"
-
 #include "color.hpp"
 
 #include <iostream>
@@ -169,3 +168,81 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
 
     ////Calcular la distancia euclídea con los demás colores
 //}
+
+// TODO
+// CORREGIR TABLA DE COLORES
+void compressAoS(const std::string& inputFile, const std::string& outputFile) {
+    // Abrir archivo de entrada en modo binario
+    std::ifstream file(inputFile, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << std::endl;
+        return;
+    }
+
+    std::string format;
+    int width, height, maxColorValue;
+
+    // Leer el encabezado del archivo PPM (suponiendo formato P6)
+    file >> format >> width >> height >> maxColorValue;
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea después del encabezado
+
+    if (format != "P6" || maxColorValue <= 0 || maxColorValue > 65535) {
+        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << std::endl;
+        return;
+    }
+
+    // Leer píxeles de la imagen
+    std::vector<Color> imagePixels;
+    for (int i = 0; i < width * height; ++i) {
+        uint8_t r, g, b;
+        file.read(reinterpret_cast<char*>(&r), 1);
+        file.read(reinterpret_cast<char*>(&g), 1);
+        file.read(reinterpret_cast<char*>(&b), 1);
+        imagePixels.emplace_back(r, g, b);
+    }
+    file.close();
+
+    // Crear tabla de colores y mapa de índices
+    std::vector<Color> colorTable;
+    std::unordered_map<Color, int> colorIndex;
+    for (const auto& pixel : imagePixels) {
+        if (colorIndex.find(pixel) == colorIndex.end()) {
+            colorIndex[pixel] = static_cast<int>(colorTable.size()); // Cambio aquí para hacer casting a int
+            colorTable.push_back(pixel);
+        }
+    }
+
+    // Abrir archivo de salida en modo binario
+    std::ofstream outFile(outputFile, std::ios::binary);
+    outFile << "C6 " << width << " " << height << " " << maxColorValue << " " << colorTable.size() << "\n";
+
+    // Escribir la tabla de colores
+    for (const auto& color : colorTable) {
+        if (maxColorValue <= 255) {
+            outFile.put(static_cast<char>(color.red));
+            outFile.put(static_cast<char>(color.green));
+            outFile.put(static_cast<char>(color.blue));
+        } else {
+            outFile.write(reinterpret_cast<const char*>(&color.red), 2);
+            outFile.write(reinterpret_cast<const char*>(&color.green), 2);
+            outFile.write(reinterpret_cast<const char*>(&color.blue), 2);
+        }
+    }
+
+    // Escribir los índices de píxeles
+    int colorIndexSize = (colorTable.size() <= 256) ? 1 : (colorTable.size() <= 65536) ? 2 : 4;
+    for (const auto& pixel : imagePixels) {
+        int index = colorIndex[pixel];
+        if (colorIndexSize == 1) {
+            outFile.put(static_cast<char>(static_cast<uint8_t>(index)));
+        } else if (colorIndexSize == 2) {
+            uint16_t index16 = static_cast<uint16_t>(index);
+            outFile.write(reinterpret_cast<const char*>(&index16), 2);
+        } else if (colorIndexSize == 4) {
+            uint32_t index32 = static_cast<uint32_t>(index);
+            outFile.write(reinterpret_cast<const char*>(&index32), 4);
+        }
+    }
+
+    outFile.close();
+}

@@ -56,8 +56,14 @@ int main(int argc, char* argv[]) {
 
         } else if (command == "compress") {
             // Comando 'compress': comprimir el archivo
+            if (!args.validateCompress()) {
+              std::cerr << args.getErrorMessage() << std::endl;
+              return -1;  // Error en los argumentos para 'info'
+            }
             std::cout << "Compressing file..." << std::endl;
-            // Aquí iría la lógica para comprimir el archivo
+            compressAoS(args.getInputFile(), args.getOutputFile());
+            std::cout << "File compressed to " << args.getOutputFile() << std::endl;
+            return 0;
 
         } else {
             // Si el comando no es válido, mostrar mensaje de error

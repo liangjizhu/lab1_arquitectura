@@ -14,6 +14,7 @@ class ProgramArgs {
 
     bool validate();
     std::string getInputFile() const;
+    std::string getOutputFile() const;
     std::string getOperation() const;
     int getMaxLevel() const;
     int getResizeWidth() const;
@@ -36,6 +37,7 @@ class ProgramArgs {
     // Agregar las variables faltantes
     std::string operation;
     std::string inputFile;
+    std::string outputFile;
 };
 
 #endif // PROGARGS_HPP

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <unordered_map>
 
 void processMaxLevel(const std::string& inputFile, int maxLevel) {
     // Lógica para el comando 'maxlevel'
