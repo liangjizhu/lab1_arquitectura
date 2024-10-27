@@ -2,6 +2,8 @@
 add_library(imgaos
         imageaos.cpp
         imageaos.hpp
+        color.hpp
+        color.cpp
 )
 
 # Asegurarse de que pueda encontrar progargs.hpp y otras cabeceras en common/

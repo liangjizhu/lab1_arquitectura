@@ -1,6 +1,9 @@
 # Add to this list all files related to imgsoa library
 add_library(imgsoa
+        imagesoa.hpp
         imagesoa.cpp
+        color.hpp
+        color.cpp
 )
 
 # Asegurarse de que pueda encontrar progargs.hpp y otras cabeceras en common/

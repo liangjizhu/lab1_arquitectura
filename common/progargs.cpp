@@ -19,7 +19,7 @@ bool ProgramArgs::validate() {
     }
 
     // El primer argumento es el nombre del programa, el segundo es el comando
-    operation = args[1];
+    operation = args[2];
 
     // Validar el comando
     if (operation == "info" || operation == "maxlevel" || operation == "resize" ||
@@ -30,7 +30,7 @@ bool ProgramArgs::validate() {
             errorMessage = "Error: Missing input file for the operation: " + operation;
             return false;
         }
-        inputFile = args[2];
+        inputFile = args[1];
         return true;
     } else {
         errorMessage = "Error: Invalid operation: " + operation;

@@ -10,7 +10,6 @@
 
 #include <string>
 
-void processInfo(const std::string& inputFile);
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
 // Otras funciones para 'resize', 'cutfreq', etc.
 

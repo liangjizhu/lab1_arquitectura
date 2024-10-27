@@ -5,58 +5,15 @@
 #include "imageaos.hpp"
 #include "binaryio.hpp"
 
+#include "color.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
 #include <unordered_map>
-#include <array>
 #include <vector>
 #include <algorithm>
-#include <iostream>
-
-struct Color {
-    unsigned short r; // Red component (0-65535)
-    unsigned short g; // Green component (0-65535)
-    unsigned short b; // Blue component (0-65535)
-
-    // Constructor to initialize the color
-    Color(unsigned short red, unsigned short green, unsigned short blue)
-        : r(red), g(green), b(blue) {}
-
-    // Operator to compare colors
-    bool operator==(const Color& other) const {
-        return r == other.r && g == other.g && b == other.b;
-    }
-
-    // Para ordenarlos
-    bool operator<(const Color& other) const {
-        return std::tie(r, g, b) < std::tie(other.r, other.g, other.b);
-    }
-};
-std::vector<Color> ArrayOfColors;
-
-
-// Definir una función hash para Color
-struct ColorHash {
-    std::size_t operator()(const Color& color) const {
-        return std::hash<unsigned short>()(color.r) ^
-               (std::hash<unsigned short>()(color.g) << 1) ^
-               (std::hash<unsigned short>()(color.b) << 2);
-    }
-};
-
-void processInfo(const std::string& inputFile) {
-    // Lógica para el comando 'info'
-    std::ifstream file(inputFile);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open input file: " << inputFile << std::endl;
-        return;
-    }
-
-    // Aquí procesas el archivo PPM para extraer información
-    std::cout << "Processing 'info' for file: " << inputFile << std::endl;
-    // Ejemplo de lo que podrías imprimir (análisis del archivo PPM)
-}
+#include <string>
 
 // TODO:
 //  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
@@ -136,17 +93,22 @@ void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
 //VOY A IMAGINAR QUE HAY UN STRUCT PARA CADA COLOR (lo voy a llamar Color) 
 //Y UN VECTOR LLAMADO ArrayOfColors QUE CONTIENE TODOS LOS COLORES DE LA IMAGEN
 
+
+// ******* COLOR IMPLEMENTADO EN COLOR.HPP *******
 //FUNCIÓN PARA CALCULAR LA DISTANCIA EUCLÍDEA
 double distancia_euclidiana(const Color& c1, const Color& c2) {
-    return std::sqrt(std::pow(c1.r - c2.r, 2) + std::pow(c1.g - c2.g, 2) + std::pow(c1.b - c2.b, 2));
+    return std::sqrt(std::pow(c1.red - c2.red, 2) +
+                     std::pow(c1.green - c2.green, 2) +
+                     std::pow(c1.blue - c2.blue, 2));
 }
+
 
 //FUNCIÓN PARA CONTAR LA FRECUENCIA DE CADA COLOR
 //Un unordered_map es como un diccionario pero su tiempo de búsqueda es O(1), y si se repite la clave, se sobreescribe
 //Paso el vector por referencia para no hacer una copia y así ser más eficiente
-std::unordered_map<Color, int, ColorHash> contar_frecuencia(const std::vector<Color>& pixeles) {
+std::unordered_map<Color, int> contar_frecuencia(const std::vector<Color>& pixeles) {
     
-    std::unordered_map<Color, int, ColorHash> frecuencia;
+    std::unordered_map<Color, int> frecuencia;
 
     for (const auto& pixel : pixeles) {
         frecuencia[pixel]++;
@@ -155,13 +117,13 @@ std::unordered_map<Color, int, ColorHash> contar_frecuencia(const std::vector<Co
     return frecuencia;
 }
 
-//FUNCIÓN PARA ENCONTRAR LOS COLORES MENOS FRECUENTES
-//Para encontrar los colores menos frecuentes necesitamos que el unordered map pase a ser un vector de pares, ya que los vectores son ordenables
-//Ordenaremos el vector de menor a mayor frecuencia y seleccionaremos los primeros 'n' colores
+// FUNCIÓN PARA ENCONTRAR LOS COLORES MENOS FRECUENTES
+// Para encontrar los colores menos frecuentes necesitamos que el unordered map pase a ser un vector de pares, ya que los vectores son ordenables
+// Ordenaremos el vector de menor a mayor frecuencia y seleccionaremos los primeros 'n' colores
 
 //Toma como parámetro de entrada el unordered map (llamado frecuencia) y el número de colores a seleccionar, y retorna el vector de los n colores menos frecuentes
 
-std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int, ColorHash>& frecuencia, long unsigned int n) {
+std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int>& frecuencia, long unsigned int n) {
     
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
     std::vector<std::pair<Color, int>> colores_frecuentes(frecuencia.begin(), frecuencia.end());
@@ -178,32 +140,32 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
     //Creamos un vector vacío de colores
     //Metemos en el vector vacío los 'n' primeros colores menos frecuentes
     std::vector<Color> menos_frecuentes;
-    for (long unsigned int i = 0; i < n && i < colores_frecuentes.size(); ++i) {
-        menos_frecuentes.push_back(colores_frecuentes[i].first);
+    for (size_t i = 0; i < static_cast<size_t>(n) && i < colores_frecuentes.size(); ++i) {
+      menos_frecuentes.push_back(colores_frecuentes[i].first);
     }
+
 
     return menos_frecuentes;
 }
 
-void distancias_euclideas(std::vector<Color>& menos_frecuentes, std::vector<Color>& pixeles) {
+// void distancias_euclideas(std::vector<Color>& menos_frecuentes, std::vector<Color>& pixeles) {
     //Calcular la distancia euclídea con los demás colores
-    for (const auto& pixel : pixeles) {
-        for (const auto& color : menos_frecuentes) {
-            double distancia = distancia_euclidiana(pixel, color);
-            std::cout << distancia;
+    // for (const auto& pixel : pixeles) {
+    //    for (const auto& color : menos_frecuentes) {
+            // double distancia = distancia_euclidiana(pixel, color);
             // Hacer algo con la distancia
-        }
-    }
-}
+    //    }
+    // }
+// }
 
-void processCutfreq(long unsigned int numColors, std::vector<Color>& pixeles) {
-    //Determinar la frecuencia absoluta de cada color
-    std::unordered_map<Color, int, ColorHash> frecuencia;
-    frecuencia = contar_frecuencia(pixeles);
+//void processCutfreq(int numColors, std::vector<Color>& pixeles) {
+    ////Determinar la frecuencia absoluta de cada color
+    //std::unordered_map<Color, int> frecuencia;
+    //frecuencia = contar_frecuencia(pixeles);
 
-    //Encontrar los colores menos frecuentes y ordenarlos
-    std::vector<Color> menos_frecuentes;
-    menos_frecuentes = encontrar_colores_menos_frecuentes(frecuencia, numColors);
+    ////Encontrar los colores menos frecuentes y ordenarlos
+    //std::vector<Color> menos_frecuentes;
+    //menos_frecuentes = encontrar_colores_menos_frecuentes(frecuencia, numColors);
 
-    //Calcular la distancia euclídea con los demás colores
-}
+    ////Calcular la distancia euclídea con los demás colores
+//}

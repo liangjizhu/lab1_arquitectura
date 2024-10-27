@@ -22,7 +22,7 @@ class ProgramArgs {
 
     std::string getErrorMessage() const;
 
-    // Cambiar las funciones de validación a públicas
+    // Funciones de validación
     bool validateInfo();
     bool validateMaxLevel();
     bool validateResize();

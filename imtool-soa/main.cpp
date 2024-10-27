@@ -2,9 +2,11 @@
 // Created by liang on 4/10/24.
 //
 
-#include "progargs.hpp"  // Incluir el manejo de argumentos
-#include "binaryio.hpp"  // Incluir el manejo de archivos binarios
-#include <iostream>      // Para la salida estándar
+#include "progargs.hpp"    // Incluir el manejo de argumentos
+#include "binaryio.hpp"    // Incluir el manejo de archivos binarios
+#include "imageinfo.hpp"   // Incluir la lógica de processInfo desde common
+
+#include <iostream>        // Para la salida estándar
 
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
@@ -21,16 +23,23 @@ int main(int argc, char* argv[]) {
 
     try {
         if (command == "info") {
-            // Comando 'info': leer archivo y mostrar información
-            std::vector<uint8_t> data = BinaryIO::readBinaryFile(args.getInputFile());
-            std::cout << "File info: Size = " << data.size() << " bytes" << std::endl;
+            // Validar argumentos para 'info'
+            if (!args.validateInfo()) {
+                std::cerr << args.getErrorMessage() << std::endl;
+                return -1;  // Error en los argumentos para 'info'
+            }
+            // Llamada a processInfo desde common
+            processInfo(args.getInputFile());
+            return 0;
 
         } else if (command == "maxlevel") {
-            // Comando 'maxlevel': establecer el nivel máximo
-            int maxLevel = args.getMaxLevel();
-            std::cout << "Setting max level to: " << maxLevel << std::endl;
-            // Aquí iría la lógica para aplicar el maxLevel al archivo
-
+            // Validar y procesar 'maxlevel'
+            if (!args.validateMaxLevel()) {
+                std::cerr << args.getErrorMessage() << std::endl;
+                return -1;
+            }
+            // processMaxLevel(args.getInputFile(), args.getMaxLevel());
+            return 0;
         } else if (command == "resize") {
             // Comando 'resize': redimensionar el archivo
             int width = args.getResizeWidth();
