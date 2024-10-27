@@ -21,6 +21,8 @@ void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
     int contadorDeLineas = 0;
     std::string maxIntensidadStr = "";
     int maxIntensidadInt;
+
+    //TODO: HAY QUE MANEJAR DISTINTOS FORMATOS DE PPM 
     //bool altaIntensidad;
 
     //int contador = 0;
