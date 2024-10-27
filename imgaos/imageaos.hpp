@@ -6,10 +6,12 @@
 #ifndef IMAGEAOS_HPP
 #define IMAGEAOS_HPP
 
+#include "binaryio.hpp"
+
 #include <string>
 
 void processInfo(const std::string& inputFile);
-void processMaxLevel(const std::string& inputFile, int maxLevel);
+void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
 // Otras funciones para 'resize', 'cutfreq', etc.
 
 #endif // IMAGEAOS_HPP

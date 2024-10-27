@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
                 std::cerr << args.getErrorMessage() << std::endl;
                 return -1;
             }
-            processMaxLevel(args.getInputFile(), args.getMaxLevel());
+            processMaxLevel(BinaryIO::readBinaryFile(args.getInputFile()), args.getMaxLevel());
             return 0;
         } else if (command == "resize") {
             // Comando 'resize': redimensionar el archivo
