@@ -2,72 +2,68 @@
 // Created by liang on 4/10/24.
 //
 
-#include "progargs.hpp"  // Incluir el manejo de argumentos
-#include "binaryio.hpp"  // Incluir el manejo de archivos binarios
-#include "imageaos.hpp"  // Incluir la lógica de imgaos
+#include <iostream>
+#include <string>
+#include <cstdlib>
 
-#include <iostream>      // Para la salida estándar
+void printErrorAndExit(const std::string& message, int errorCode) {
+    std::cerr << "Error: " << message << std::endl;
+    std::exit(errorCode);
+}
+
+bool isInteger(const std::string& str) {
+    for (char c : str) {
+        if (!std::isdigit(c) && c != '-') return false;
+    }
+    return true;
+}
 
 int main(int argc, char* argv[]) {
-    // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
-    ProgramArgs args(argc, argv);
-
-    // Validar los argumentos proporcionados
-    if (!args.validate()) {
-        std::cerr << "Error: " << args.getErrorMessage() << std::endl;
-        return 1;  // Salir con error si la validación falla
+    // Validación de número de argumentos mínimo
+    if (argc < 4) {
+        printErrorAndExit("Invalid number of arguments: " + std::to_string(argc - 1), -1);
     }
 
-    // Obtener el comando (info, maxlevel, resize, cutfreq, compress)
-    std::string command = args.getOperation();
+    std::string option = argv[3];
 
-    try {
-        if (command == "info") {
-            // Validar argumentos para 'info'
-            if (!args.validateInfo()) {
-                std::cerr << args.getErrorMessage() << std::endl;
-                return -1;  // Error en los argumentos para 'info'
-            }
-            // Llamada a la lógica de imgaos para 'info'
-            processInfo(args.getInputFile());
-            return 0;
-
-        } else if (command == "maxlevel") {
-            // Validar y procesar 'maxlevel'
-            if (!args.validateMaxLevel()) {
-                std::cerr << args.getErrorMessage() << std::endl;
-                return -1;
-            }
-            processMaxLevel(args.getInputFile(), args.getMaxLevel());
-            return 0;
-        } else if (command == "resize") {
-            // Comando 'resize': redimensionar el archivo
-            int width = args.getResizeWidth();
-            int height = args.getResizeHeight();
-            std::cout << "Resizing to " << width << "x" << height << std::endl;
-            // Aquí iría la lógica para redimensionar el archivo
-
-        } else if (command == "cutfreq") {
-            // Comando 'cutfreq': cortar frecuencia
-            int frequency = args.getCutFreq();
-            std::cout << "Cutting frequency to: " << frequency << std::endl;
-            // Aquí iría la lógica para ajustar la frecuencia del archivo
-
-        } else if (command == "compress") {
-            // Comando 'compress': comprimir el archivo
-            std::cout << "Compressing file..." << std::endl;
-            // Aquí iría la lógica para comprimir el archivo
-
-        } else {
-            // Si el comando no es válido, mostrar mensaje de error
-            std::cerr << "Error: Unknown command '" << command << "'" << std::endl;
-            return 1;
+    if (option == "info" || option == "compress") {
+        // 'info' y 'compress' requieren exactamente tres argumentos
+        if (argc != 4) printErrorAndExit("Invalid extra arguments for " + option, -1);
+    } else if (option == "maxlevel") {
+        // 'maxlevel' requiere exactamente cuatro argumentos
+        if (argc != 5) {
+            printErrorAndExit("Invalid number of extra arguments for maxlevel: " + std::to_string(argc - 3), -1);
         }
-
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
+        if (!isInteger(argv[4])) {
+            printErrorAndExit("Invalid maxlevel: " + std::string(argv[4]), -1);
+        }
+        int maxlevel = std::stoi(argv[4]);
+        if (maxlevel < 0 || maxlevel > 65535) {
+            printErrorAndExit("Invalid maxlevel: " + std::to_string(maxlevel), -1);
+        }
+    } else if (option == "resize") {
+        // 'resize' requiere exactamente cinco argumentos
+        if (argc != 6) {
+            printErrorAndExit("Invalid number of extra arguments for resize: " + std::to_string(argc - 3), -1);
+        }
+        if (!isInteger(argv[4]) || std::stoi(argv[4]) <= 0) {
+            printErrorAndExit("Invalid resize width: " + std::string(argv[4]), -1);
+        }
+        if (!isInteger(argv[5]) || std::stoi(argv[5]) <= 0) {
+            printErrorAndExit("Invalid resize height: " + std::string(argv[5]), -1);
+        }
+    } else if (option == "cutfreq") {
+        // 'cutfreq' requiere exactamente cuatro argumentos
+        if (argc != 5) {
+            printErrorAndExit("Invalid number of extra arguments for cutfreq: " + std::to_string(argc - 3), -1);
+        }
+        if (!isInteger(argv[4]) || std::stoi(argv[4]) <= 0) {
+            printErrorAndExit("Invalid cutfreq: " + std::string(argv[4]), -1);
+        }
+    } else {
+        printErrorAndExit("Invalid option: " + option, -1);
     }
 
+    std::cout << "Arguments processed successfully." << std::endl;
     return 0;
 }
