@@ -171,7 +171,12 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
 
 // TODO
 // CORREGIR TABLA DE COLORES
-void compressAoS(const std::string& inputFile, const std::string& outputFile) {
+void compressAoS(const std::string& inputFile, std::string outputFile) {
+    // Asegurarse de que el archivo de salida tenga extensión .cppm
+    if (outputFile.find(".cppm") == std::string::npos) {
+        outputFile += ".cppm";
+    }
+
     // Abrir archivo de entrada en modo binario
     std::ifstream file(inputFile, std::ios::binary);
     if (!file.is_open()) {
@@ -182,7 +187,7 @@ void compressAoS(const std::string& inputFile, const std::string& outputFile) {
     std::string format;
     int width, height, maxColorValue;
 
-    // Leer el encabezado del archivo PPM (suponiendo formato P6)
+    // Leer el encabezado del archivo PPM
     file >> format >> width >> height >> maxColorValue;
     file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea después del encabezado
 
@@ -193,12 +198,24 @@ void compressAoS(const std::string& inputFile, const std::string& outputFile) {
 
     // Leer píxeles de la imagen
     std::vector<Color> imagePixels;
-    for (int i = 0; i < width * height; ++i) {
-        uint8_t r, g, b;
-        file.read(reinterpret_cast<char*>(&r), 1);
-        file.read(reinterpret_cast<char*>(&g), 1);
-        file.read(reinterpret_cast<char*>(&b), 1);
-        imagePixels.emplace_back(r, g, b);
+    if (maxColorValue <= 255) {
+        // Leer cada píxel como 3 bytes
+        for (int i = 0; i < width * height; ++i) {
+            uint8_t r, g, b;
+            file.read(reinterpret_cast<char*>(&r), 1);
+            file.read(reinterpret_cast<char*>(&g), 1);
+            file.read(reinterpret_cast<char*>(&b), 1);
+            imagePixels.emplace_back(r, g, b);
+        }
+    } else {
+        // Leer cada píxel como 6 bytes (2 bytes por canal de color en little-endian)
+        for (int i = 0; i < width * height; ++i) {
+            uint16_t r, g, b;
+            file.read(reinterpret_cast<char*>(&r), 2);
+            file.read(reinterpret_cast<char*>(&g), 2);
+            file.read(reinterpret_cast<char*>(&b), 2);
+            imagePixels.emplace_back(r, g, b);
+        }
     }
     file.close();
 
@@ -207,7 +224,7 @@ void compressAoS(const std::string& inputFile, const std::string& outputFile) {
     std::unordered_map<Color, int> colorIndex;
     for (const auto& pixel : imagePixels) {
         if (colorIndex.find(pixel) == colorIndex.end()) {
-            colorIndex[pixel] = static_cast<int>(colorTable.size()); // Cambio aquí para hacer casting a int
+            colorIndex[pixel] = static_cast<int>(colorTable.size());
             colorTable.push_back(pixel);
         }
     }
@@ -216,30 +233,36 @@ void compressAoS(const std::string& inputFile, const std::string& outputFile) {
     std::ofstream outFile(outputFile, std::ios::binary);
     outFile << "C6 " << width << " " << height << " " << maxColorValue << " " << colorTable.size() << "\n";
 
-    // Escribir la tabla de colores
+    // Escribir la tabla de colores en formato binario
     for (const auto& color : colorTable) {
         if (maxColorValue <= 255) {
             outFile.put(static_cast<char>(color.red));
             outFile.put(static_cast<char>(color.green));
             outFile.put(static_cast<char>(color.blue));
         } else {
-            outFile.write(reinterpret_cast<const char*>(&color.red), 2);
-            outFile.write(reinterpret_cast<const char*>(&color.green), 2);
-            outFile.write(reinterpret_cast<const char*>(&color.blue), 2);
+            uint16_t redLE = htole16(color.red);  // Convertir a little-endian
+            uint16_t greenLE = htole16(color.green);
+            uint16_t blueLE = htole16(color.blue);
+            outFile.write(reinterpret_cast<const char*>(&redLE), 2);
+            outFile.write(reinterpret_cast<const char*>(&greenLE), 2);
+            outFile.write(reinterpret_cast<const char*>(&blueLE), 2);
         }
     }
 
-    // Escribir los índices de píxeles
+    // Determinar el tamaño de índice necesario para los píxeles
     int colorIndexSize = (colorTable.size() <= 256) ? 1 : (colorTable.size() <= 65536) ? 2 : 4;
+
+    // Escribir los índices de píxeles en formato binario
     for (const auto& pixel : imagePixels) {
         int index = colorIndex[pixel];
         if (colorIndexSize == 1) {
-            outFile.put(static_cast<char>(static_cast<uint8_t>(index)));
+            uint8_t index8 = static_cast<uint8_t>(index);
+            outFile.write(reinterpret_cast<const char*>(&index8), 1);
         } else if (colorIndexSize == 2) {
-            uint16_t index16 = static_cast<uint16_t>(index);
+            uint16_t index16 = htole16(static_cast<uint16_t>(index));
             outFile.write(reinterpret_cast<const char*>(&index16), 2);
         } else if (colorIndexSize == 4) {
-            uint32_t index32 = static_cast<uint32_t>(index);
+            uint32_t index32 = htole32(static_cast<uint32_t>(index));
             outFile.write(reinterpret_cast<const char*>(&index32), 4);
         }
     }
