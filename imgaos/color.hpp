@@ -39,7 +39,7 @@ inline std::ostream& operator<<(std::ostream& os, const Color& color) {
 }
 
 // Especialización de std::hash para la estructura Color
-namespace std {
+/*namespace std {
     template <>
     struct hash<Color> {
         size_t operator()(const Color& color) const {
@@ -48,8 +48,16 @@ namespace std {
                      (std::hash<uint8_t>()(color.blue) << 1);
         }
     };
-}
+}*/
 
+namespace std {
+    template <>
+    struct hash<Color> {
+        size_t operator()(const Color& color) const {
+            return (static_cast<size_t>(color.red) << 16) | (static_cast<size_t>(color.green) << 8) | static_cast<size_t>(color.blue);
+        }
+    };
+}
 
 class ColorPalette {
     public:

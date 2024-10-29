@@ -11,6 +11,11 @@
 
 #include <string>
 
+
+constexpr int SHIFT_RED = 16;
+constexpr int SHIFT_GREEN = 8;
+constexpr int MASK = 0xFF;
+
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
 void compressAoS(const std::string& inputFile, const std::string& outputFile);
 // Otras funciones para 'resize', 'cutfreq', etc.

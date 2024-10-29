@@ -2,6 +2,10 @@
 // Created by liang on 27/10/24.
 //
 #include "color.hpp"
+#include <fstream>
+#include <vector>
+#include <unordered_map>
+#include <iostream>
 
 void ColorPalette::addColor(const Color& color) {
   colors.push_back(color);
@@ -23,3 +27,4 @@ void ColorPalette::printPalette() const {
     color.print();
   }
 }
+
