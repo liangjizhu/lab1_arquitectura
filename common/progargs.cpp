@@ -170,7 +170,7 @@ int ProgramArgs::getResizeHeight() const {
 
 int ProgramArgs::getCutFreq() const {
     try {
-        return std::stoi(args[3]);
+        return std::stoi(args[4]);
     } catch (const std::exception& e) {
         std::cerr << "Error: Invalid cut frequency value: " << e.what() << std::endl;
         return -1;

@@ -7,8 +7,10 @@
 #include "imageinfo.hpp"   // Incluir la lógica de processInfo desde common
 #include "imageaos.hpp"    // Incluir la lógica de imgaos
 
+// Forward declaration of processCutFreq function
 #include <iostream>        // Para la salida estándar
 
+void processCutfreq(const std::string& inputFile, const std::string& outputFile, int frequency);
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
     ProgramArgs args(argc, argv);
@@ -51,7 +53,14 @@ int main(int argc, char* argv[]) {
         } else if (command == "cutfreq") {
             // Comando 'cutfreq': cortar frecuencia
             int frequency = args.getCutFreq();
+            std::string inputFile = args.getInputFile();       // Obtener el archivo de entrada
+            std::string outputFile = args.getOutputFile();     // Obtener el archivo de salida (asegúrate de que esto exista en ProgramArgs)
+    
             std::cout << "Cutting frequency to: " << frequency << std::endl;
+
+            // Llama a la función processCutfreq con los argumentos correctos
+            processCutfreq(inputFile, outputFile, frequency);
+            return 0;
             // Aquí iría la lógica para ajustar la frecuencia del archivo
 
         } else if (command == "compress") {

@@ -12,13 +12,17 @@ struct Color {
     uint8_t green;
     uint8_t blue;
 
+    Color() : red(0), green(0), blue(0) {}
     Color(uint8_t r, uint8_t g, uint8_t b) : red(r), green(g), blue(b) {}
 
     // Comparador de igualdad para usar Color como clave en unordered_map
     bool operator==(const Color& other) const {
         return red == other.red && green == other.green && blue == other.blue;
     }
-
+    bool operator!=(const Color& other) const {
+        return red != other.red || green != other.green || blue != other.blue;
+    }
+    
     // Función para imprimir el color (útil para depuración)
     void print() const {
         std::cout << "R: " << static_cast<int>(red)
@@ -26,6 +30,13 @@ struct Color {
                   << " B: " << static_cast<int>(blue) << std::endl;
     }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Color& color) {
+    os << "(" << static_cast<int>(color.red) << ", "
+       << static_cast<int>(color.green) << ", "
+       << static_cast<int>(color.blue) << ")";
+    return os;
+}
 
 // Especialización de std::hash para la estructura Color
 namespace std {
@@ -38,6 +49,7 @@ namespace std {
         }
     };
 }
+
 
 class ColorPalette {
     public:
