@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_set>
+#include <memory>
 
 
 // TODO:
@@ -395,13 +396,13 @@ std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
 
     return {width, height}; // Retornar ancho y alto
 }
-
 struct KDNode {
     Color color;
-    KDNode* left;
-    KDNode* right;
+    std::unique_ptr<KDNode> left;  // Cambiado a std::unique_ptr
+    std::unique_ptr<KDNode> right; // Cambiado a std::unique_ptr
     KDNode(Color c) : color(c), left(nullptr), right(nullptr) {}
 };
+
 
 // Función de distancia euclidiana
 /*double distancia_euclidiana(const Color& c1, const Color& c2) {
@@ -411,7 +412,7 @@ struct KDNode {
 }*/
 
 // Construcción del K-D Tree en 3 dimensiones (RGB)
-KDNode* construirKDTree(std::vector<Color>& colores, int depth = 0) {
+std::unique_ptr<KDNode> construirKDTree(std::vector<Color>& colores, int depth = 0) {
     if (colores.empty()) return nullptr;
 
     int axis = depth % 3;
@@ -420,14 +421,13 @@ KDNode* construirKDTree(std::vector<Color>& colores, int depth = 0) {
                (axis == 1) ? a.green < b.green : a.blue < b.blue;
     };
 
-    // Define `mid` como size_t
     std::vector<Color>::size_type mid = colores.size() / 2;
     
     // Usa nth_element para colocar el mediano en su posición sin ordenar todo el vector
     std::nth_element(colores.begin(), colores.begin() + static_cast<std::vector<Color>::difference_type>(mid), colores.end(), comp);
 
     // Crear el nodo actual con el elemento mediano
-    KDNode* node = new KDNode(colores[mid]);
+    auto node = std::make_unique<KDNode>(colores[mid]); // Cambiado a std::make_unique
 
     // Dividir en sub-vectores usando el mediano como pivote
     std::vector<Color> leftColors(colores.begin(), colores.begin() + static_cast<std::vector<Color>::difference_type>(mid));
@@ -436,7 +436,7 @@ KDNode* construirKDTree(std::vector<Color>& colores, int depth = 0) {
     node->left = construirKDTree(leftColors, depth + 1);
     node->right = construirKDTree(rightColors, depth + 1);
 
-    return node;
+    return node; // Devuelve std::unique_ptr
 }
 
 // Función de búsqueda de vecino más cercano
@@ -447,7 +447,7 @@ double distanciaCuadrada(const Color& a, const Color& b) {
            (a.blue - b.blue) * (a.blue - b.blue);
 }
 
-void buscarVecinoMasCercano(KDNode* root, const Color& target, int depth, Color& mejorColor, double& mejorDistanciaCuadrada) {
+void buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, const Color& target, int depth, Color& mejorColor, double& mejorDistanciaCuadrada) {
     if (!root) return;
 
     // Calcular la distancia cuadrada en lugar de la distancia completa
@@ -459,19 +459,11 @@ void buscarVecinoMasCercano(KDNode* root, const Color& target, int depth, Color&
 
     // Determinar el eje actual de comparación
     int axis = depth % 3;
-    KDNode* siguiente = nullptr;
-    KDNode* opuesto = nullptr;
+    std::unique_ptr<KDNode>& siguiente = (axis == 0 && target.red < root->color.red) ||
+                                         (axis == 1 && target.green < root->color.green) ||
+                                         (axis == 2 && target.blue < root->color.blue) ? root->left : root->right;
 
-    // Decide el siguiente nodo a explorar
-    if ((axis == 0 && target.red < root->color.red) ||
-        (axis == 1 && target.green < root->color.green) ||
-        (axis == 2 && target.blue < root->color.blue)) {
-        siguiente = root->left;
-        opuesto = root->right;
-    } else {
-        siguiente = root->right;
-        opuesto = root->left;
-    }
+    std::unique_ptr<KDNode>& opuesto = (siguiente == root->left) ? root->right : root->left;
 
     // Búsqueda recursiva en el subárbol relevante
     buscarVecinoMasCercano(siguiente, target, depth + 1, mejorColor, mejorDistanciaCuadrada);
@@ -487,8 +479,9 @@ void buscarVecinoMasCercano(KDNode* root, const Color& target, int depth, Color&
     }
 }
 
+
 // Función para encontrar el color más cercano para una lista de colores menos frecuentes
-std::vector<Color> encontrarColoresCercanos(KDNode* root, const std::vector<Color>& coloresMenosFrecuentes) {
+std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const std::vector<Color>& coloresMenosFrecuentes) {
     std::vector<Color> coloresCercanos;
     coloresCercanos.reserve(coloresMenosFrecuentes.size()); // Reservar espacio para evitar redimensionamientos
 
@@ -501,6 +494,7 @@ std::vector<Color> encontrarColoresCercanos(KDNode* root, const std::vector<Colo
 
     return coloresCercanos;
 }
+
 
 
 void processCutfreq(const std::string& inputFile, const std::string& outputFile, int numColors) {
@@ -522,7 +516,7 @@ void processCutfreq(const std::string& inputFile, const std::string& outputFile,
 
     // Construir el K-D Tree con los colores restantes
     std::cout << "Construyendo K-D Tree" << std::endl;
-    KDNode* kdTreeRoot = construirKDTree(coloresRestantes);
+    std::unique_ptr<KDNode> kdTreeRoot = construirKDTree(coloresRestantes);
 
     // Mapear cada color menos frecuente a su color más cercano en el K-D Tree
     std::cout << "Buscando colores más cercanos" << std::endl;
