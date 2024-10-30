@@ -419,15 +419,20 @@ KDNode* construirKDTree(std::vector<Color>& colores, int depth = 0) {
         return (axis == 0) ? a.red < b.red :
                (axis == 1) ? a.green < b.green : a.blue < b.blue;
     };
-    std::sort(colores.begin(), colores.end(), comp);
 
+    // Define `mid` como size_t
     std::vector<Color>::size_type mid = colores.size() / 2;
+    
+    // Usa nth_element para colocar el mediano en su posición sin ordenar todo el vector
+    std::nth_element(colores.begin(), colores.begin() + static_cast<std::vector<Color>::difference_type>(mid), colores.end(), comp);
 
+    // Crear el nodo actual con el elemento mediano
     KDNode* node = new KDNode(colores[mid]);
 
-    // Conversión explícita de mid para evitar el error de signo
-    std::vector<Color> leftColors(colores.begin(), colores.begin() + static_cast<long>(mid));
-    std::vector<Color> rightColors(colores.begin() + static_cast<long>(mid) + 1, colores.end());
+    // Dividir en sub-vectores usando el mediano como pivote
+    std::vector<Color> leftColors(colores.begin(), colores.begin() + static_cast<std::vector<Color>::difference_type>(mid));
+    std::vector<Color> rightColors(colores.begin() + static_cast<std::vector<Color>::difference_type>(mid) + 1, colores.end());
+
     node->left = construirKDTree(leftColors, depth + 1);
     node->right = construirKDTree(rightColors, depth + 1);
 
@@ -435,20 +440,29 @@ KDNode* construirKDTree(std::vector<Color>& colores, int depth = 0) {
 }
 
 // Función de búsqueda de vecino más cercano
-void buscarVecinoMasCercano(KDNode* root, const Color& target, int depth, Color& mejorColor, double& mejorDistancia) {
+// Función de distancia cuadrada para evitar la raíz cuadrada
+double distanciaCuadrada(const Color& a, const Color& b) {
+    return (a.red - b.red) * (a.red - b.red) +
+           (a.green - b.green) * (a.green - b.green) +
+           (a.blue - b.blue) * (a.blue - b.blue);
+}
+
+void buscarVecinoMasCercano(KDNode* root, const Color& target, int depth, Color& mejorColor, double& mejorDistanciaCuadrada) {
     if (!root) return;
 
-    // Calcular distancia entre el color objetivo y el color en el nodo actual
-    double distancia = distancia_euclidiana(target, root->color);
-    if (distancia < mejorDistancia) {
-        mejorDistancia = distancia;
+    // Calcular la distancia cuadrada en lugar de la distancia completa
+    double distancia = distanciaCuadrada(target, root->color);
+    if (distancia < mejorDistanciaCuadrada) {
+        mejorDistanciaCuadrada = distancia;
         mejorColor = root->color;
     }
 
-    // Determinar si buscar en el subárbol izquierdo o derecho
+    // Determinar el eje actual de comparación
     int axis = depth % 3;
     KDNode* siguiente = nullptr;
     KDNode* opuesto = nullptr;
+
+    // Decide el siguiente nodo a explorar
     if ((axis == 0 && target.red < root->color.red) ||
         (axis == 1 && target.green < root->color.green) ||
         (axis == 2 && target.blue < root->color.blue)) {
@@ -460,27 +474,31 @@ void buscarVecinoMasCercano(KDNode* root, const Color& target, int depth, Color&
     }
 
     // Búsqueda recursiva en el subárbol relevante
-    buscarVecinoMasCercano(siguiente, target, depth + 1, mejorColor, mejorDistancia);
+    buscarVecinoMasCercano(siguiente, target, depth + 1, mejorColor, mejorDistanciaCuadrada);
 
-    // Podar si es posible
-    double distanciaEje = 0;
-    if (axis == 0) distanciaEje = std::abs(target.red - root->color.red);
-    if (axis == 1) distanciaEje = std::abs(target.green - root->color.green);
-    if (axis == 2) distanciaEje = std::abs(target.blue - root->color.blue);
-    if (distanciaEje < mejorDistancia) {
-        buscarVecinoMasCercano(opuesto, target, depth + 1, mejorColor, mejorDistancia);
+    // Calcular la distancia cuadrada en el eje de partición
+    double distanciaEje = (axis == 0) ? (target.red - root->color.red) * (target.red - root->color.red) :
+                          (axis == 1) ? (target.green - root->color.green) * (target.green - root->color.green) :
+                                        (target.blue - root->color.blue) * (target.blue - root->color.blue);
+
+    // Podar el subárbol opuesto si es posible
+    if (distanciaEje < mejorDistanciaCuadrada) {
+        buscarVecinoMasCercano(opuesto, target, depth + 1, mejorColor, mejorDistanciaCuadrada);
     }
 }
 
 // Función para encontrar el color más cercano para una lista de colores menos frecuentes
 std::vector<Color> encontrarColoresCercanos(KDNode* root, const std::vector<Color>& coloresMenosFrecuentes) {
     std::vector<Color> coloresCercanos;
+    coloresCercanos.reserve(coloresMenosFrecuentes.size()); // Reservar espacio para evitar redimensionamientos
+
     for (const auto& color : coloresMenosFrecuentes) {
         Color mejorColor;
-        double mejorDistancia = std::numeric_limits<double>::max();
-        buscarVecinoMasCercano(root, color, 0, mejorColor, mejorDistancia);
+        double mejorDistanciaCuadrada = std::numeric_limits<double>::max();
+        buscarVecinoMasCercano(root, color, 0, mejorColor, mejorDistanciaCuadrada);
         coloresCercanos.push_back(mejorColor);
     }
+
     return coloresCercanos;
 }
 
