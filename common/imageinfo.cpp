@@ -1,17 +1,22 @@
-//
-// Created by liang on 27/10/24.
-//
 #include "imageinfo.hpp"
+#include "binaryio.hpp"
 #include <iostream>
-#include <fstream>
+#include <vector>
+#include <sstream>  // Para std::istringstream
 #include <limits>
 
 void processInfo(const std::string& inputFile) {
-    std::ifstream file(inputFile, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << std::endl;
+    // Leer el archivo completo como un vector de bytes
+    std::vector<uint8_t> fileData;
+    try {
+        fileData = BinaryIO::readBinaryFile(inputFile);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
         return;
     }
+
+    // Crear un stream para leer desde el vector de bytes
+    std::istringstream file(std::string(fileData.begin(), fileData.end()), std::ios::binary);
 
     std::string format;
     int width, height, maxColorValue;
@@ -37,17 +42,15 @@ void processInfo(const std::string& inputFile) {
     std::cout << "Alto: " << height << std::endl;
     std::cout << "Valor Máximo de Color: " << maxColorValue << std::endl;
 
-    file.seekg(0, std::ios::end);
-    std::streamoff fileSize = file.tellg();
-    int pixelSize = maxColorValue > 255 ? 6 : 3;
-    int imageSize = width * height * pixelSize;
-    file.seekg(std::ios::beg);
+    // Convertir los valores a unsigned antes de multiplicar
+    unsigned int uWidth = static_cast<unsigned int>(width);
+    unsigned int uHeight = static_cast<unsigned int>(height);
+    unsigned int uPixelSize = maxColorValue > 255 ? 6U : 3U;
+    unsigned int imageSize = uWidth * uHeight * uPixelSize;
 
-    if (fileSize < imageSize) {
+    if (fileData.size() < imageSize) {
         std::cerr << "Error: El archivo parece estar incompleto o dañado." << std::endl;
     } else {
         std::cout << "El archivo contiene suficientes datos de píxeles." << std::endl;
     }
-
-    file.close();
 }
