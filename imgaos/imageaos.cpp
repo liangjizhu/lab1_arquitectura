@@ -191,6 +191,8 @@ double distancia_euclidiana(const Color& c1, const Color& c2) {
 
 // TODO
 // CORREGIR TABLA DE COLORES
+
+
 void compressAoS(const std::string& inputFile, const std::string& outputFile) {
     // Abrir archivo de entrada en modo binario
     std::ifstream file(inputFile, std::ios::binary);
@@ -272,6 +274,9 @@ void compressAoS(const std::string& inputFile, const std::string& outputFile) {
 
 //Toma como parámetro de entrada el unordered map (llamado frecuencia) y el número de colores a seleccionar, y retorna el vector de los n colores menos frecuentes
 
+const int MAX_COLOR_VALUE = 255;
+
+
 std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int>& frecuencia, int n) {
     
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
@@ -280,8 +285,8 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
     // Ordenar por frecuencia ascendente
     //sort es parte de <include algorithm>
     std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), 
-        [](const auto& a, const auto& b) {
-            return a.second < b.second; // Comparar por la frecuencia (segundo elemento del par)
+        [](const auto& colora, const auto& colorb) {
+            return colora.second < colorb.second; // Comparar por la frecuencia (segundo elemento del par)
         }
     );
 
@@ -299,8 +304,8 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
 void escribirPPM(const std::string& filename, const std::vector<Color>& pixeles, int width, int height) {
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "Error: No se pudo abrir el archivo para escribir: " << filename << std::endl;
-        std::cerr << "Error: No se pudo abrir el archivo para escribir: " << filename << std::endl;
+        std::cout << "Error: No se pudo abrir el archivo para escribir: " << filename << '\n';
+        std::cerr << "Error: No se pudo abrir el archivo para escribir: " << filename << '\n';
         return;
     }
 
@@ -309,9 +314,9 @@ void escribirPPM(const std::string& filename, const std::vector<Color>& pixeles,
 
     // Escribir los datos de los píxeles en formato binario
     for (const auto& pixel : pixeles) {
-        file.write(reinterpret_cast<const char*>(&pixel.red), sizeof(pixel.red));
-        file.write(reinterpret_cast<const char*>(&pixel.green), sizeof(pixel.green));
-        file.write(reinterpret_cast<const char*>(&pixel.blue), sizeof(pixel.blue));
+        file.put(static_cast<char>(pixel.red));
+        file.put(static_cast<char>(pixel.green));
+        file.put(static_cast<char>(pixel.blue));
     }
 
     file.close();
@@ -319,63 +324,56 @@ void escribirPPM(const std::string& filename, const std::vector<Color>& pixeles,
 
 
 std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColors(const std::string& inputFile) {
-    std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << std::endl;
-
+    std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << '\n';
     // Abrir archivo en modo binario
     std::ifstream file(inputFile, std::ios::binary);
+    std::string format;
+    int width = 0;
+    int height = 0;
+    int maxColorValue = 0;
     if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << std::endl;
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
         return {{}, {}}; // Retorna ambos vacíos si falla
     }
-
     // Leer el encabezado PPM
-    std::string format;
-    int width, height, maxColorValue;
     file >> format >> width >> height >> maxColorValue;
     file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea
-    if (format != "P6" || maxColorValue != 255) {
-        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << std::endl;
+    if (format != "P6" || maxColorValue != MAX_COLOR_VALUE) {
+        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << '\n';
         return {{}, {}}; // Retorna ambos vacíos si hay error en formato
     }
-
-    // Usar size_t para cálculos de tamaño
-    size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height); // Asegúrate de que ambos sean size_t
-
-    // Preparar el vector de píxeles con capacidad reservada
+    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height); // Asegúrate de que ambos sean size_t
     std::vector<Color> pixelList;
     pixelList.reserve(totalPixels); // Cambiado a size_t
-
     // Preparar el mapa de frecuencia de colores
     std::unordered_map<Color, int> colorFrequency;
-
     // Leer todos los datos de píxeles de una vez en un solo bloque
-    std::vector<uint8_t> buffer(totalPixels * 3); // Cambiado a uint8_t y size_t
-    file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size())); // Asegúrate de que el tamaño se maneje correctamente
-
-    // Procesar el buffer en bloques de tres bytes para extraer los colores
+    std::vector<char> buffer(totalPixels * 3);  // Cambiamos a char para evitar reinterpret_cast
+    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));  // Ahora no es necesario reinterpret_cast
+    // Procesar el buffer en bloques de tres bytes para extraer los colores 
     for (size_t i = 0; i < buffer.size(); i += 3) {
-        Color pixelColor = {buffer[i], buffer[i + 1], buffer[i + 2]};
-
-        // Agregar el color al vector y actualizar la frecuencia
+        const Color pixelColor = {static_cast<uint8_t>(buffer[i]), 
+                                  static_cast<uint8_t>(buffer[i + 1]), 
+                                  static_cast<uint8_t>(buffer[i + 2])};
         pixelList.push_back(pixelColor);
         colorFrequency[pixelColor]++;
     }
-
     file.close();
-    std::cout << "Píxeles leídos y frecuencias calculadas" << std::endl;
+    std::cout << "Píxeles leídos y frecuencias calculadas" << '\n';
     return {pixelList, colorFrequency};
 }
 
 
 std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
-    int width = 0, height = 0;
+    int width = 0;
+    int height = 0;
     std::string format;
-    int maxColorValue;
+    int maxColorValue = 0;
 
     // Abrir archivo de entrada en modo texto
     std::ifstream file(inputFile);
     if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << std::endl;
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
         return {width, height}; // Retorna dimensiones 0 si falla
     }
 
@@ -384,7 +382,7 @@ std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
 
     // Verificar el formato y el valor máximo de color
     if (format != "P6" && format != "P3") { // P3 es el formato ASCII, P6 es binario
-        std::cerr << "Error: Formato PPM no soportado en " << inputFile << std::endl;
+        std::cerr << "Error: Formato PPM no soportado en " << inputFile << '\n';
         return {width, height}; // Retorna dimensiones leídas hasta el momento
     }
 
@@ -400,7 +398,7 @@ struct KDNode {
     Color color;
     std::unique_ptr<KDNode> left;  // Cambiado a std::unique_ptr
     std::unique_ptr<KDNode> right; // Cambiado a std::unique_ptr
-    KDNode(Color c) : color(c), left(nullptr), right(nullptr) {}
+    KDNode(Color color) : color(color), left(nullptr), right(nullptr) {}
 };
 
 
@@ -413,15 +411,25 @@ struct KDNode {
 
 // Construcción del K-D Tree en 3 dimensiones (RGB)
 std::unique_ptr<KDNode> construirKDTree(std::vector<Color>& colores, int depth = 0) {
-    if (colores.empty()) return nullptr;
+    if (colores.empty()){
+        return nullptr;
+        }
 
-    int axis = depth % 3;
-    auto comp = [axis](const Color& a, const Color& b) {
-        return (axis == 0) ? a.red < b.red :
-               (axis == 1) ? a.green < b.green : a.blue < b.blue;
+    const int axis = depth % 3;
+    auto comp = [axis](const Color& colora, const Color& colorb) {
+        if (axis == 0) {
+            return colora.red < colorb.red;
+        }
+        if (axis == 1) {
+            return colora.green < colorb.green;
+        }
+        if ((axis != 0) && (axis != 1)) {
+            return colora.blue < colorb.blue;
+        }
+        throw std::invalid_argument("Axis value out of range");
     };
 
-    std::vector<Color>::size_type mid = colores.size() / 2;
+    const std::vector<Color>::size_type mid = colores.size() / 2;
     
     // Usa nth_element para colocar el mediano en su posición sin ordenar todo el vector
     std::nth_element(colores.begin(), colores.begin() + static_cast<std::vector<Color>::difference_type>(mid), colores.end(), comp);
@@ -441,42 +449,52 @@ std::unique_ptr<KDNode> construirKDTree(std::vector<Color>& colores, int depth =
 
 // Función de búsqueda de vecino más cercano
 // Función de distancia cuadrada para evitar la raíz cuadrada
-double distanciaCuadrada(const Color& a, const Color& b) {
-    return (a.red - b.red) * (a.red - b.red) +
-           (a.green - b.green) * (a.green - b.green) +
-           (a.blue - b.blue) * (a.blue - b.blue);
+double distanciaCuadrada(const Color& colora, const Color& colorb) {
+    return (colora.red - colorb.red) * (colora.red - colorb.red) +
+           (colora.green - colorb.green) * (colora.green - colorb.green) +
+           (colora.blue - colorb.blue) * (colora.blue - colorb.blue);
 }
 
-void buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, const Color& target, int depth, Color& mejorColor, double& mejorDistanciaCuadrada) {
-    if (!root) return;
-
-    // Calcular la distancia cuadrada en lugar de la distancia completa
-    double distancia = distanciaCuadrada(target, root->color);
-    if (distancia < mejorDistanciaCuadrada) {
-        mejorDistanciaCuadrada = distancia;
-        mejorColor = root->color;
+std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, const Color& target, int depth) {
+    if (!root) {
+        // Si el nodo es nulo, devolvemos un valor con la máxima distancia posible
+        return {Color(), std::numeric_limits<double>::max()};
     }
-
-    // Determinar el eje actual de comparación
-    int axis = depth % 3;
+    // Calcular la distancia cuadrada
+    const double distancia = distanciaCuadrada(target, root->color);
+    Color mejorColor = root->color;
+    double mejorDistanciaCuadrada = distancia;
+    // Determinar el eje de comparación actual
+    const int axis = depth % 3;
     std::unique_ptr<KDNode>& siguiente = (axis == 0 && target.red < root->color.red) ||
                                          (axis == 1 && target.green < root->color.green) ||
                                          (axis == 2 && target.blue < root->color.blue) ? root->left : root->right;
 
     std::unique_ptr<KDNode>& opuesto = (siguiente == root->left) ? root->right : root->left;
-
     // Búsqueda recursiva en el subárbol relevante
-    buscarVecinoMasCercano(siguiente, target, depth + 1, mejorColor, mejorDistanciaCuadrada);
-
-    // Calcular la distancia cuadrada en el eje de partición
-    double distanciaEje = (axis == 0) ? (target.red - root->color.red) * (target.red - root->color.red) :
-                          (axis == 1) ? (target.green - root->color.green) * (target.green - root->color.green) :
-                                        (target.blue - root->color.blue) * (target.blue - root->color.blue);
-
-    // Podar el subárbol opuesto si es posible
-    if (distanciaEje < mejorDistanciaCuadrada) {
-        buscarVecinoMasCercano(opuesto, target, depth + 1, mejorColor, mejorDistanciaCuadrada);
+    auto resultadoSiguiente = buscarVecinoMasCercano(siguiente, target, depth + 1);
+    if (resultadoSiguiente.second < mejorDistanciaCuadrada) {
+        mejorDistanciaCuadrada = resultadoSiguiente.second;
+        mejorColor = resultadoSiguiente.first;
     }
+    // Calcular la distancia cuadrada en el eje de partición
+    double distanciaEje = 0;
+    if (axis == 0) {
+        distanciaEje = (target.red - root->color.red) * (target.red - root->color.red);
+    } else if (axis == 1) {
+        distanciaEje = (target.green - root->color.green) * (target.green - root->color.green);
+    } else {
+        distanciaEje = (target.blue - root->color.blue) * (target.blue - root->color.blue);
+    }
+    // Podar el subárbol opuesto si es necesario
+    if (distanciaEje < mejorDistanciaCuadrada) {
+        auto resultadoOpuesto = buscarVecinoMasCercano(opuesto, target, depth + 1);
+        if (resultadoOpuesto.second < mejorDistanciaCuadrada) {
+            mejorDistanciaCuadrada = resultadoOpuesto.second;
+            mejorColor = resultadoOpuesto.first;
+        }
+    }
+    return {mejorColor, mejorDistanciaCuadrada};
 }
 
 
@@ -486,9 +504,10 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
     coloresCercanos.reserve(coloresMenosFrecuentes.size()); // Reservar espacio para evitar redimensionamientos
 
     for (const auto& color : coloresMenosFrecuentes) {
-        Color mejorColor;
-        double mejorDistanciaCuadrada = std::numeric_limits<double>::max();
-        buscarVecinoMasCercano(root, color, 0, mejorColor, mejorDistanciaCuadrada);
+        // Capturar el resultado de buscarVecinoMasCercano
+        auto [mejorColor, mejorDistanciaCuadrada] = buscarVecinoMasCercano(root, color, 0);
+        
+        // Agregar el mejor color encontrado a la lista de colores cercanos
         coloresCercanos.push_back(mejorColor);
     }
 
@@ -496,15 +515,12 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
 }
 
 
-
-void processCutfreq(const std::string& inputFile, const std::string& outputFile, int numColors) {
+void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
     //Leyendo los píxeles es donde más tarda
     auto[pixelList, colorTable] = readImageAndStoreColors(inputFile);
-    std::cout << "Número de colores en la imagen: " << colorTable.size() << std::endl;
-
+    std::cout << "Número de colores en la imagen: " << colorTable.size() << '\n';
     // Encontrar los colores menos frecuentes
     std::vector<Color> menos_frecuentes = encontrar_colores_menos_frecuentes(colorTable, numColors);
-
     // Filtrar colores frecuentes para construir el K-D Tree
     std::unordered_set<Color> menosFrecuentesSet(menos_frecuentes.begin(), menos_frecuentes.end());
     std::vector<Color> coloresRestantes;
@@ -513,35 +529,29 @@ void processCutfreq(const std::string& inputFile, const std::string& outputFile,
             coloresRestantes.push_back(color);
         }
     }
-
     // Construir el K-D Tree con los colores restantes
-    std::cout << "Construyendo K-D Tree" << std::endl;
+    std::cout << "Construyendo K-D Tree" << '\n';
     std::unique_ptr<KDNode> kdTreeRoot = construirKDTree(coloresRestantes);
-
     // Mapear cada color menos frecuente a su color más cercano en el K-D Tree
-    std::cout << "Buscando colores más cercanos" << std::endl;
+    std::cout << "Buscando colores más cercanos" << '\n';
     std::unordered_map<Color, Color> sustituciones;
     for (const auto& color_menos_frecuente : menos_frecuentes) {
-        Color colorMasCercano;
-        double minDistancia = std::numeric_limits<double>::max();
-        buscarVecinoMasCercano(kdTreeRoot, color_menos_frecuente, 0, colorMasCercano, minDistancia);
-        sustituciones[color_menos_frecuente] = colorMasCercano;
+    // Capturar el resultado de buscarVecinoMasCercano
+    auto [colorMasCercano, minDistancia] = buscarVecinoMasCercano(kdTreeRoot, color_menos_frecuente, 0);
+    
+    // Almacenar la sustitución en el mapa
+    sustituciones[color_menos_frecuente] = colorMasCercano;
     }
-
     //Aquí tarda un buen rato
     // Sustituir cada aparición de un color menos frecuente en la lista de píxeles
-    std::cout << "Sustituyendo colores menos frecuentes" << std::endl;
+    std::cout << "Sustituyendo colores menos frecuentes" << '\n';
     for (auto& pixel : pixelList) {
         if (sustituciones.find(pixel) != sustituciones.end()) {
             pixel = sustituciones[pixel];
         }
     }
-
     // Obtener dimensiones de la imagen y guardar la imagen resultante
     auto [width, height] = getPPMDimensions(inputFile);
     escribirPPM(outputFile, pixelList, width, height);
-    std::cout << "Imagen modificada escrita en: " << outputFile << std::endl;
-
-    // Liberar memoria del K-D Tree
-    // (agregar una función recursiva para liberar nodos si es necesario)
+    std::cout << "Imagen modificada escrita en: " << outputFile << '\n';
 }

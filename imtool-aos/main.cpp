@@ -10,7 +10,7 @@
 // Forward declaration of processCutFreq function
 #include <iostream>        // Para la salida estándar
 
-void processCutfreq(const std::string& inputFile, const std::string& outputFile, int frequency);
+void processCutfreq(const std::string& inputFile, int frequency, const std::string& outputFile);
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
     ProgramArgs args(argc, argv);
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Cutting frequency to: " << frequency << std::endl;
 
             // Llama a la función processCutfreq con los argumentos correctos
-            processCutfreq(inputFile, outputFile, frequency);
+            processCutfreq(inputFile, frequency, outputFile);
             return 0;
             // Aquí iría la lógica para ajustar la frecuencia del archivo
 
