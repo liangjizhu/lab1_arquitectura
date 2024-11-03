@@ -8,6 +8,7 @@
 #include "imageaos.hpp"    // Incluir la lógica de imgaos
 
 #include <iostream>        // Para la salida estándar
+#include <chrono>
 
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
@@ -61,10 +62,22 @@ int main(int argc, char* argv[]) {
               return -1;  // Error en los argumentos para 'info'
             }
             std::cout << "Compressing file..." << std::endl;
-            compressAoS(args.getInputFile(), args.getOutputFile());
-            std::cout << "File compressed to " << args.getOutputFile() << std::endl;
-            return 0;
 
+            // Iniciar la medición de tiempo
+            auto start = std::chrono::high_resolution_clock::now();
+
+            // Llamar a la función de compresión
+            compressAoS(args.getInputFile(), args.getOutputFile());
+
+            // Finalizar la medición de tiempo
+            auto end = std::chrono::high_resolution_clock::now();
+
+            // Calcular la duración en segundos
+            std::chrono::duration<double> duration = end - start;
+
+            std::cout << "File compressed to " << args.getOutputFile() << std::endl;
+            std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
+            return 0;
         } else {
             // Si el comando no es válido, mostrar mensaje de error
             std::cerr << "Error: Unknown command '" << command << "'" << std::endl;

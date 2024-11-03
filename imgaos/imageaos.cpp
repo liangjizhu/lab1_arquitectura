@@ -4,6 +4,7 @@
 
 #include "imageaos.hpp"
 #include "binaryio.hpp"
+#include "imageinfo.hpp"
 #include "color.hpp"
 
 #include <iostream>
@@ -13,6 +14,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <sstream>
 
 // TODO:
 //  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
@@ -171,101 +173,120 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
 
 // TODO
 // CORREGIR TABLA DE COLORES
-void compressAoS(const std::string& inputFile, std::string outputFile) {
-    // Asegurarse de que el archivo de salida tenga extensión .cppm
-    if (outputFile.find(".cppm") == std::string::npos) {
-        outputFile += ".cppm";
-    }
+std::vector<Color> extractImagePixels(const std::vector<uint8_t>& fileData, const PPMHeader& header) {
+    size_t numPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
+    size_t pixelSize = (header.maxColorValue > 255) ? 6 : 3;
+    size_t pixelStart = fileData.size() - numPixels * pixelSize;
 
-    // Abrir archivo de entrada en modo binario
-    std::ifstream file(inputFile, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << std::endl;
-        return;
-    }
-
-    std::string format;
-    int width, height, maxColorValue;
-
-    // Leer el encabezado del archivo PPM
-    file >> format >> width >> height >> maxColorValue;
-    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea después del encabezado
-
-    if (format != "P6" || maxColorValue <= 0 || maxColorValue > 65535) {
-        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << std::endl;
-        return;
-    }
-
-    // Leer píxeles de la imagen
     std::vector<Color> imagePixels;
-    if (maxColorValue <= 255) {
-        // Leer cada píxel como 3 bytes
-        for (int i = 0; i < width * height; ++i) {
-            uint8_t r, g, b;
-            file.read(reinterpret_cast<char*>(&r), 1);
-            file.read(reinterpret_cast<char*>(&g), 1);
-            file.read(reinterpret_cast<char*>(&b), 1);
-            imagePixels.emplace_back(r, g, b);
-        }
-    } else {
-        // Leer cada píxel como 6 bytes (2 bytes por canal de color en little-endian)
-        for (int i = 0; i < width * height; ++i) {
-            uint16_t r, g, b;
-            file.read(reinterpret_cast<char*>(&r), 2);
-            file.read(reinterpret_cast<char*>(&g), 2);
-            file.read(reinterpret_cast<char*>(&b), 2);
-            imagePixels.emplace_back(r, g, b);
-        }
-    }
-    file.close();
+    imagePixels.reserve(numPixels);
 
-    // Crear tabla de colores y mapa de índices
+    for (size_t i = pixelStart; i < fileData.size(); i += pixelSize) {
+        imagePixels.push_back(Color::fromBinary(&fileData[i], header));
+    }
+
+    return imagePixels;
+}
+
+std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(const std::vector<Color>& imagePixels) {
     std::vector<Color> colorTable;
+    colorTable.reserve(256);  // Reserva espacio inicial
+
     std::unordered_map<Color, int> colorIndex;
+    colorIndex.reserve(256);
+
     for (const auto& pixel : imagePixels) {
-        if (colorIndex.find(pixel) == colorIndex.end()) {
-            colorIndex[pixel] = static_cast<int>(colorTable.size());
+        auto [it, inserted] = colorIndex.emplace(pixel, colorTable.size());
+        if (inserted) {
             colorTable.push_back(pixel);
         }
     }
 
-    // Abrir archivo de salida en modo binario
-    std::ofstream outFile(outputFile, std::ios::binary);
-    outFile << "C6 " << width << " " << height << " " << maxColorValue << " " << colorTable.size() << "\n";
+    // Ordenar la tabla de colores (en orden RGB)
+    std::sort(colorTable.begin(), colorTable.end(), [](const Color& a, const Color& b) {
+        return std::tie(a.red, a.green, a.blue) < std::tie(b.red, b.green, b.blue);
+    });
 
-    // Escribir la tabla de colores en formato binario
-    for (const auto& color : colorTable) {
-        if (maxColorValue <= 255) {
-            outFile.put(static_cast<char>(color.red));
-            outFile.put(static_cast<char>(color.green));
-            outFile.put(static_cast<char>(color.blue));
-        } else {
-            uint16_t redLE = htole16(color.red);  // Convertir a little-endian
-            uint16_t greenLE = htole16(color.green);
-            uint16_t blueLE = htole16(color.blue);
-            outFile.write(reinterpret_cast<const char*>(&redLE), 2);
-            outFile.write(reinterpret_cast<const char*>(&greenLE), 2);
-            outFile.write(reinterpret_cast<const char*>(&blueLE), 2);
-        }
+    // Actualizar el mapa de índices
+    colorIndex.clear();
+    colorIndex.reserve(colorTable.size());
+    for (size_t i = 0; i < colorTable.size(); ++i) {
+        colorIndex[colorTable[i]] = static_cast<int>(i);
     }
 
-    // Determinar el tamaño de índice necesario para los píxeles
-    int colorIndexSize = (colorTable.size() <= 256) ? 1 : (colorTable.size() <= 65536) ? 2 : 4;
-
-    // Escribir los índices de píxeles en formato binario
-    for (const auto& pixel : imagePixels) {
-        int index = colorIndex[pixel];
-        if (colorIndexSize == 1) {
-            uint8_t index8 = static_cast<uint8_t>(index);
-            outFile.write(reinterpret_cast<const char*>(&index8), 1);
-        } else if (colorIndexSize == 2) {
-            uint16_t index16 = htole16(static_cast<uint16_t>(index));
-            outFile.write(reinterpret_cast<const char*>(&index16), 2);
-        } else if (colorIndexSize == 4) {
-            uint32_t index32 = htole32(static_cast<uint32_t>(index));
-            outFile.write(reinterpret_cast<const char*>(&index32), 4);
-        }
-    }
-
-    outFile.close();
+    return {colorTable, colorIndex};
 }
+
+std::string generateHeader(const PPMHeader& header, int colorTableSize) {
+    std::ostringstream headerStream;
+    headerStream << "C6 " << header.width << " " << header.height << " " << header.maxColorValue << " " << colorTableSize << "\n";
+    return headerStream.str();
+}
+
+void appendColorTable(std::vector<uint8_t>& compressedData, const std::vector<Color>& colorTable, const PPMHeader& header) {
+    for (const auto& color : colorTable) {
+        color.writeToBinary(compressedData, header);  // `writeToBinary` convierte el color a bytes y los añade a `compressedData`
+    }
+}
+
+void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<Color>& imagePixels, const std::unordered_map<Color, int>& colorIndex) {
+    size_t colorIndexSize = static_cast<size_t>((colorIndex.size() <= 256) ? 1 : (colorIndex.size() <= 65536) ? 2 : 4);
+
+    compressedData.reserve(compressedData.size() + imagePixels.size() * colorIndexSize);
+
+    for (const auto& pixel : imagePixels) {
+        int index = colorIndex.at(pixel);
+
+        switch (colorIndexSize) {
+          case 1:
+              compressedData.push_back(static_cast<uint8_t>(index));
+              break;
+          case 2:
+              compressedData.push_back(static_cast<uint8_t>(index & 0xFF));
+              compressedData.push_back(static_cast<uint8_t>((index >> 8) & 0xFF));
+              break;
+          case 4:
+              compressedData.push_back(static_cast<uint8_t>(index & 0xFF));
+              compressedData.push_back(static_cast<uint8_t>((index >> 8) & 0xFF));
+              compressedData.push_back(static_cast<uint8_t>((index >> 16) & 0xFF));
+              compressedData.push_back(static_cast<uint8_t>((index >> 24) & 0xFF));
+              break;
+        }
+    }
+}
+
+void compressAoS(const std::string& inputFile, std::string outputFile) {
+    if (outputFile.find(".cppm") == std::string::npos) {
+        outputFile += ".cppm";
+    }
+
+    std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(inputFile);
+    if (fileData.empty()) {
+        std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << inputFile << std::endl;
+        return;
+    }
+
+    PPMHeader header;
+    if (!readPPMHeader(inputFile, header)) {
+        std::cerr << "Error al leer el encabezado del archivo PPM." << std::endl;
+        return;
+    }
+
+    auto imagePixels = extractImagePixels(fileData, header);
+    auto [colorTable, colorIndex] = createColorTable(imagePixels);
+    std::string headerStr = generateHeader(header, static_cast<int>(colorTable.size()));
+
+    std::vector<uint8_t> compressedData;
+    compressedData.reserve(
+        headerStr.size() +
+        static_cast<size_t>(header.width) * static_cast<size_t>(header.height)
+    );
+
+    compressedData.insert(compressedData.end(), headerStr.begin(), headerStr.end());
+    appendColorTable(compressedData, colorTable, header);
+    appendPixelIndices(compressedData, imagePixels, colorIndex);
+
+    BinaryIO::writeBinaryFile(outputFile, compressedData);
+}
+
+
