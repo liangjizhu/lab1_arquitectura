@@ -13,6 +13,6 @@
 
 void processMaxLevel(const std::string& inputFile, int maxLevel) {
     // Lógica para el comando 'maxlevel'
-    std::cout << "Processing 'maxlevel' for file: " << inputFile << " with max level: " << maxLevel << std::endl;
+    std::cout << "Processing 'maxlevel' for file: " << inputFile << " with max level: " << maxLevel << '\n';
     // Aquí iría la lógica para modificar el nivel máximo del archivo
 }

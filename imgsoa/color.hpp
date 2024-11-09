@@ -14,8 +14,8 @@
 class ColorPalette {
   public:
   void addColor(uint8_t red, uint8_t green, uint8_t blue);
-  std::tuple<uint8_t, uint8_t, uint8_t> getColor(size_t index) const;
-  size_t size() const;
+  [[nodiscard]] std::tuple<uint8_t, uint8_t, uint8_t> getColor(size_t index) const;
+  [[nodiscard]] size_t size() const;
   void printPalette() const;
 
   private:

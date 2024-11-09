@@ -1,60 +1,57 @@
-//
-// Created by liang on 4/10/24.
-//
-
 #include "progargs.hpp"
+
+#include <cstdint>
 #include <stdexcept>
 #include <iostream>
 
-ProgramArgs::ProgramArgs(int argc, char* argv[]) {
-    for (int i = 0; i < argc; ++i) {
-        args.push_back(argv[i]);
+constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
+constexpr size_t RESIZE_ARGUMENT_COUNT = 5;
+
+// Constructor para inicializar los argumentos usando std::vector<std::string>
+ProgramArgs::ProgramArgs(const std::vector<std::string>& arguments) : args(arguments) {}
+
+bool ProgramArgs::validate() const{
+    if (args.size() < 3) {
+        errorMessage = "Error: Invalid number of arguments";
+        return false;
     }
+
+    // `info` tiene tres argumentos: nombre del programa, archivo de entrada, y comando.
+    if (args[2] == "info") {
+        if (args.size() != 3) {
+            errorMessage = "Error: Invalid number of arguments for 'info'";
+            return false;
+        }
+        operation = args[2];
+        inputFile = args[1];
+        return true;
+    }
+
+    // Las demás operaciones tienen cuatro argumentos: nombre del programa, archivo de entrada, operación y archivo de salida.
+    if (args.size() < 4) {
+        errorMessage = "Error: Invalid number of arguments";
+        return false;
+    }
+
+    operation = args[3];
+
+    // Validar el comando
+    if (operation == "maxlevel" || operation == "resize" || operation == "cutfreq" || operation == "compress") {
+        inputFile = args[1];
+        outputFile = args[2];  // Para las operaciones que requieren archivo de salida
+
+        if (operation == "compress" && args.size() != 4) {
+            errorMessage = "Error: Invalid arguments for 'compress'";
+            return false;
+        }
+        return true;
+    }
+        errorMessage = "Error: Invalid operation: " + operation;
+        return false;
+
 }
 
-bool ProgramArgs::validate() {
-  if (args.size() < 3) {
-    errorMessage = "Error: Invalid number of arguments";
-    return false;
-  }
-
-  // `info` tiene tres argumentos: nombre del programa, archivo de entrada, y comando.
-  if (args[2] == "info") {
-    if (args.size() != 3) {
-      errorMessage = "Error: Invalid number of arguments for 'info'";
-      return false;
-    }
-    operation = args[2];
-    inputFile = args[1];
-    return true;
-  }
-
-  // Las demás operaciones tienen cuatro argumentos: nombre del programa, archivo de entrada, operación y archivo de salida.
-  if (args.size() < 4) {
-    errorMessage = "Error: Invalid number of arguments";
-    return false;
-  }
-
-  operation = args[3];
-
-  // Validar el comando
-  if (operation == "maxlevel" || operation == "resize" || operation == "cutfreq" || operation == "compress") {
-    inputFile = args[1];
-    outputFile = args[2];  // Para las operaciones que requieren archivo de salida
-
-    if (operation == "compress" && args.size() != 4) {
-      errorMessage = "Error: Invalid arguments for 'compress'";
-      return false;
-    }
-
-    return true;
-  } else {
-    errorMessage = "Error: Invalid operation: " + operation;
-    return false;
-  }
-}
-
-bool ProgramArgs::validateInfo() {
+bool ProgramArgs::validateInfo() const{
     if (args.size() != 3) {
         errorMessage = "Error: Invalid extra arguments for info";
         return false;
@@ -62,14 +59,14 @@ bool ProgramArgs::validateInfo() {
     return true;
 }
 
-bool ProgramArgs::validateMaxLevel() {
+bool ProgramArgs::validateMaxLevel() const{
     if (args.size() != 4) {
         errorMessage = "Error: Invalid number of extra arguments for maxlevel";
         return false;
     }
     try {
-        int maxLevel = std::stoi(args[3]);
-        if (maxLevel < 0 || maxLevel > 65535) {
+        int const maxLevel = std::stoi(args[3]);
+        if (maxLevel < 0 || maxLevel > MAX_COLOR_VALUE_16BIT) {
             errorMessage = "Error: Invalid maxlevel: " + args[3];
             return false;
         }
@@ -80,14 +77,15 @@ bool ProgramArgs::validateMaxLevel() {
     return true;
 }
 
-bool ProgramArgs::validateResize() {
-    if (args.size() != 5) {
+
+bool ProgramArgs::validateResize() const{
+    if (args.size() != RESIZE_ARGUMENT_COUNT) {
         errorMessage = "Error: Invalid number of extra arguments for resize";
         return false;
     }
     try {
-        int width = std::stoi(args[3]);
-        int height = std::stoi(args[4]);
+        int const width = std::stoi(args[3]);
+        int const height = std::stoi(args[4]);
         if (width <= 0 || height <= 0) {
             errorMessage = "Error: Invalid resize dimensions";
             return false;
@@ -99,13 +97,13 @@ bool ProgramArgs::validateResize() {
     return true;
 }
 
-bool ProgramArgs::validateCutFreq() {
+bool ProgramArgs::validateCutFreq() const{
     if (args.size() != 4) {
         errorMessage = "Error: Invalid number of extra arguments for cutfreq";
         return false;
     }
     try {
-        int freq = std::stoi(args[3]);
+        int const freq = std::stoi(args[3]);
         if (freq <= 0) {
             errorMessage = "Error: Invalid cutfreq: " + args[3];
             return false;
@@ -117,7 +115,7 @@ bool ProgramArgs::validateCutFreq() {
     return true;
 }
 
-bool ProgramArgs::validateCompress() {
+bool ProgramArgs::validateCompress() const{
     if (args.size() != 4) {  // Verifica que haya cuatro argumentos en total para `compress`
         errorMessage = "Error: Invalid extra arguments for compress";
         return false;
@@ -126,11 +124,14 @@ bool ProgramArgs::validateCompress() {
 }
 
 std::string ProgramArgs::getInputFile() const {
-    return inputFile;
+  return inputFile;
 }
 
-std::string ProgramArgs::getOutputFile() const {
-  return outputFile;
+std::optional<FilePaths> ProgramArgs::getFilePaths() const {
+  if (operation == "maxlevel" || operation == "resize" || operation == "cutfreq" || operation == "compress") {
+    return FilePaths{inputFile, outputFile};
+  }
+  return std::nullopt;
 }
 
 std::string ProgramArgs::getOperation() const {
@@ -145,7 +146,7 @@ int ProgramArgs::getMaxLevel() const {
     try {
         return std::stoi(args[3]);
     } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid max level value: " << e.what() << std::endl;
+        std::cerr << "Error: Invalid max level value: " << e.what() << '\n';
         return -1;
     }
 }
@@ -154,7 +155,7 @@ int ProgramArgs::getResizeWidth() const {
     try {
         return std::stoi(args[3]);
     } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid width value: " << e.what() << std::endl;
+        std::cerr << "Error: Invalid width value: " << e.what() << '\n';
         return -1;
     }
 }
@@ -163,7 +164,7 @@ int ProgramArgs::getResizeHeight() const {
     try {
         return std::stoi(args[4]);
     } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid height value: " << e.what() << std::endl;
+        std::cerr << "Error: Invalid height value: " << e.what() << '\n';
         return -1;
     }
 }
@@ -172,7 +173,7 @@ int ProgramArgs::getCutFreq() const {
     try {
         return std::stoi(args[3]);
     } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid cut frequency value: " << e.what() << std::endl;
+        std::cerr << "Error: Invalid cut frequency value: " << e.what() << '\n';
         return -1;
     }
 }

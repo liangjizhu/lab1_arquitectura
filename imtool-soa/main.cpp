@@ -10,29 +10,30 @@
 
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
-    ProgramArgs args(argc, argv);
+    std::vector<std::string> arguments(argv, argv + argc);
+    ProgramArgs args(arguments);
 
     // Validar los argumentos proporcionados
     if (!args.validate()) {
-        std::cerr << "Error: " << args.getErrorMessage() << std::endl;
+        std::cerr << "Error: " << args.getErrorMessage() << '\n';
         return 1;  // Salir con error si la validación falla
     }
 
     // Obtener el comando (info, maxlevel, resize, cutfreq, compress)
-    std::string command = args.getOperation();
+    std::string const command = args.getOperation();
 
     try {
         if (command == "info") {
             // Validar argumentos para 'info'
             if (!args.validateInfo()) {
-                std::cerr << args.getErrorMessage() << std::endl;
+                std::cerr << args.getErrorMessage() << '\n';
                 return -1;  // Error en los argumentos para 'info'
             }
             // Llamada a processInfo desde common
             processInfo(args.getInputFile());
             return 0;
 
-        } else if (command == "maxlevel") {
+        } if (command == "maxlevel") {
             // Validar y procesar 'maxlevel'
             if (!args.validateMaxLevel()) {
                 std::cerr << args.getErrorMessage() << std::endl;
@@ -65,7 +66,7 @@ int main(int argc, char* argv[]) {
         }
 
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << '\n';
         return 1;
     }
 
