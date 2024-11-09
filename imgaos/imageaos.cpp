@@ -238,19 +238,19 @@ void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<
         int index = colorIndex.at(pixel);
 
         switch (colorIndexSize) {
-          case 1:
-              compressedData.push_back(static_cast<uint8_t>(index));
-              break;
-          case 2:
-              compressedData.push_back(static_cast<uint8_t>(index & 0xFF));
-              compressedData.push_back(static_cast<uint8_t>((index >> 8) & 0xFF));
-              break;
-          case 4:
-              compressedData.push_back(static_cast<uint8_t>(index & 0xFF));
-              compressedData.push_back(static_cast<uint8_t>((index >> 8) & 0xFF));
-              compressedData.push_back(static_cast<uint8_t>((index >> 16) & 0xFF));
-              compressedData.push_back(static_cast<uint8_t>((index >> 24) & 0xFF));
-              break;
+            case 1:
+                compressedData.push_back(static_cast<uint8_t>(index));
+                break;
+            case 2:
+                compressedData.push_back(static_cast<uint8_t>(index & 0xFF));
+                compressedData.push_back(static_cast<uint8_t>((index >> 8) & 0xFF));
+                break;
+            case 4:
+                compressedData.push_back(static_cast<uint8_t>(index & 0xFF));
+                compressedData.push_back(static_cast<uint8_t>((index >> 8) & 0xFF));
+                compressedData.push_back(static_cast<uint8_t>((index >> 16) & 0xFF));
+                compressedData.push_back(static_cast<uint8_t>((index >> 24) & 0xFF));
+                break;
         }
     }
 }
