@@ -30,6 +30,7 @@ void processMaxLevel(const std::string& inputFile, int maxLevel) {
 // Lee una imagen y almacena los colores y sus frecuencias en una estructura SOA
 
 constexpr int MAX_COLOR_VALUE = 255;
+constexpr size_t BUFFER_SIZE = 4096; // Puedes ajustar este valor según sea necesario
 
 // Función de distancia cuadrada para evitar la raíz cuadrada
 double distanciaCuadrada(const Color& colora, const Color& colorb) {
@@ -40,72 +41,80 @@ double distanciaCuadrada(const Color& colora, const Color& colorb) {
 
 std::tuple<std::vector<Color>, ColorPalette, std::vector<int>> readImageAndStoreColors(const std::string& inputFile) {
     std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << '\n';
+
     // Abrir archivo en modo binario
     std::ifstream file(inputFile, std::ios::binary);
-    std::string format;
-    int width = 0;
-    int height = 0;
-    int maxColorValue = 0;
-    
     if (!file.is_open()) {
         std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
-        return {{}, {}, {}}; // Retorna todos vacíos si falla
+        return {{}, {}, {}};
     }
-    
-    // Leer el encabezado PPM
+
+    std::string format;
+    int width = 0, height = 0, maxColorValue = 0;
     file >> format >> width >> height >> maxColorValue;
-    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea
-    if (format != "P6" || maxColorValue != MAX_COLOR_VALUE) {
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    if (format != "P6" || maxColorValue != 255) {
         std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << '\n';
-        return {{}, {}, {}}; // Retorna todos vacíos si hay error en formato
+        return {{}, {}, {}};
     }
-    
-    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height); // Asegúrate de que ambos sean size_t
+
+    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height);
     std::vector<Color> pixelList;
-    pixelList.reserve(totalPixels); // Cambiado a size_t
-    
-    // Preparar el mapa de frecuencia de colores
-    std::unordered_map<Color, int> colorFrequency;
-    
-    // Leer todos los datos de píxeles de una vez en un solo bloque
-    std::vector<uint8_t> buffer(totalPixels * 3);  // Cambiamos a uint8_t para evitar reinterpret_cast
-    file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));  // Ahora no es necesario reinterpret_cast
-    
-    // Procesar el buffer en bloques de tres bytes para extraer los colores 
-    for (size_t i = 0; i < buffer.size(); i += 3) {
-        uint8_t red = buffer[i];
-        uint8_t green = buffer[i + 1];
-        uint8_t blue = buffer[i + 2];
-        
-        // Crear el color solo cuando es necesario
-        Color pixelColor = {red, green, blue};
-        pixelList.push_back(pixelColor);
-        colorFrequency[pixelColor]++;
+    pixelList.reserve(totalPixels);
+
+    // Usar un array en lugar de unordered_map para el conteo de frecuencias
+    std::vector<int> directColorFrequency(256 * 256 * 256, 0);
+
+    // Leer en bloques usando un buffer más pequeño
+    std::vector<uint8_t> buffer(BUFFER_SIZE);
+    size_t pixelsRead = 0;
+    size_t colorIndex;
+
+    while (pixelsRead < totalPixels) {
+        size_t pixelsToRead = std::min(BUFFER_SIZE / 3, totalPixels - pixelsRead);
+        file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(pixelsToRead * 3));
+
+        for (size_t i = 0; i < pixelsToRead; ++i) {
+            uint8_t red = buffer[i * 3];
+            uint8_t green = buffer[i * 3 + 1];
+            uint8_t blue = buffer[i * 3 + 2];
+
+            // Calcular índice directo para el color
+            colorIndex = (static_cast<size_t>(red) << 16) | 
+                         (static_cast<size_t>(green) << 8) | 
+                         blue;
+
+            pixelList.push_back({red, green, blue});
+            directColorFrequency[colorIndex]++;
+        }
+        pixelsRead += pixelsToRead;
     }
-    
+
     file.close();
-    std::cout << "Píxeles leídos y frecuencias calculadas" << '\n';
-    
-    // Convertir el mapa de frecuencia de colores a un vector de frecuencias
-    std::vector<int> colorFrequencies;
+
+    // Construir palette y vector de frecuencias solo para colores que existen
     ColorPalette colorPalette;
-    for (const auto& [color, frequency] : colorFrequency) {
-        colorPalette.addColor(color.red, color.green, color.blue);
-        colorFrequencies.push_back(frequency);
+    std::vector<int> colorFrequencies;
+
+    for (size_t i = 0; i < directColorFrequency.size(); ++i) {
+        if (directColorFrequency[i] > 0) {
+            uint8_t red = (i >> 16) & 0xFF;
+            uint8_t green = (i >> 8) & 0xFF;
+            uint8_t blue = i & 0xFF;
+            colorPalette.addColor(red, green, blue);
+            colorFrequencies.push_back(directColorFrequency[i]);
+        }
     }
-    
+
     return {pixelList, colorPalette, colorFrequencies};
 }
 
-
-
 std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int>& frecuencia, int n) {
-    
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
     std::vector<std::pair<Color, int>> colores_frecuentes(frecuencia.begin(), frecuencia.end());
 
     // Ordenar por frecuencia ascendente
-    //sort es parte de <include algorithm>
     std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), 
         [](const auto& colora, const auto& colorb) {
             return colora.second < colorb.second; // Comparar por la frecuencia (segundo elemento del par)
@@ -113,15 +122,12 @@ std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<C
     );
 
     // Seleccionar los primeros 'n' colores menos frecuentes
-    //Creamos un vector vacío de colores
-    //Metemos en el vector vacío los 'n' primeros colores menos frecuentes
     std::vector<Color> menos_frecuentes;
     for (size_t i = 0; i < static_cast<size_t>(n) && i < colores_frecuentes.size(); ++i) {
-      menos_frecuentes.push_back(colores_frecuentes[i].first);
+        menos_frecuentes.push_back(colores_frecuentes[i].first);
     }
     return menos_frecuentes;
 }
-
 
 
 void escribirPPM(const std::string& filename, const std::vector<Color>& pixels, int width, int height) {
