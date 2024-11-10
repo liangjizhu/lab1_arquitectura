@@ -1,10 +1,11 @@
 #ifndef COLOR_HPP
 #define COLOR_HPP
 
+#include "imageinfo.hpp"
+
 #include <vector>
 #include <cstdint>
 #include <cstddef>
-#include "imageinfo.hpp"
 
 // Clase para manejar los canales de color en SoA
 class ColorChannels {
@@ -31,7 +32,7 @@ class ColorChannels {
     void extractFromBinary(const std::vector<uint8_t>& fileData, const PPMHeader& header);
     void writeToBinary(std::vector<uint8_t>& buffer, const PPMHeader& header) const;
 
-    // Método para comparar colores
+    // Metodo para comparar colores
     [[nodiscard]] bool areEqual(size_t index1, size_t index2) const;
 
 

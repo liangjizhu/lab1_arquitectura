@@ -1,9 +1,9 @@
 #include "color.hpp"
-// #include <algorithm>
 
 constexpr uint16_t BYTE_MASK = 0xFF;
 constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
+constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 constexpr uint8_t COLOR_COMPONENT_INDEX_BLUE_HIGH = 5; // Nueva constante para el índice del byte alto de azul (para el clang-tidy)
 
 // Constructor para inicializar los canales

@@ -221,11 +221,6 @@ std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(c
 
     return {colorTable, colorIndex};
 }
-std::string generateHeader(const PPMHeader& header, int colorTableSize) {
-    std::ostringstream headerStream;
-    headerStream << "C6 " << header.width << " " << header.height << " " << header.maxColorValue << " " << colorTableSize << "\n";
-    return headerStream.str();
-}
 
 void appendColorTable(std::vector<uint8_t>& compressedData, const std::vector<Color>& colorTable, const PPMHeader& header) {
     for (const auto& color : colorTable) {
@@ -256,10 +251,7 @@ void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<
 }
 
 void compressAoS(const FilePaths& paths) {
-    std::string outputFile = paths.outputFile;
-    if (outputFile.find(".cppm") == std::string::npos) {
-        outputFile += ".cppm";
-    }
+    std::string outputFile = ensureCppmExtension(paths.outputFile);
 
     const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
     if (fileData.empty()) {
