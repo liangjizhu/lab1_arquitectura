@@ -1,7 +1,3 @@
-//
-// Created by liang on 4/10/24.
-//
-
 #include "imageaos.hpp"
 #include "binaryio.hpp"
 #include "progargs.hpp"
@@ -87,7 +83,7 @@ void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
     //ESTAMOS EN AOS -> ARRAY OF STRUCTS
     // HABRÁ UN ARRAY QUE CONTENGA TODOS LOS PÍXELES, CADA POSICIÓN DEL ARRAY TENDRÁ TRES CAMPOS (R G Y B)
     //PSEUDOCODE
-    //RECIBE UN ARGUMENTO: 
+    //RECIBE UN ARGUMENTO:
         //Número entero positivo -> Número de colores que hay que eliminar
     //PASOS A SEGUIR:
         //1.- DETERMINAR LA FRECUENCIA ABSOLUTA DE CADA COLOR
@@ -99,7 +95,7 @@ void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
         //3.- CALCULAR DISTANCIA EUCLÍDEA CON LOS DEMÁS COLORES
         //4.- SUSTITUCIÓN
 
-//VOY A IMAGINAR QUE HAY UN STRUCT PARA CADA COLOR (lo voy a llamar Color) 
+//VOY A IMAGINAR QUE HAY UN STRUCT PARA CADA COLOR (lo voy a llamar Color)
 //Y UN VECTOR LLAMADO ArrayOfColors QUE CONTIENE TODOS LOS COLORES DE LA IMAGEN
 
 

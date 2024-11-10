@@ -1,8 +1,3 @@
-//
-// Created by liang on 4/10/24.
-//
-
-
 #ifndef IMAGEAOS_HPP
 #define IMAGEAOS_HPP
 
@@ -16,6 +11,7 @@
 
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
 
+// COMPRESS
 std::vector<Color> extractImagePixels(const std::vector<uint8_t>& fileData, const PPMHeader& header);
 std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(const std::vector<Color>& imagePixels);
 std::string generateHeader(const PPMHeader& header, int colorTableSize);

@@ -124,7 +124,11 @@ bool ProgramArgs::validateCompress() const{
 }
 
 std::string ProgramArgs::getInputFile() const {
-  return inputFile;
+    return inputFile;
+}
+
+std::string ProgramArgs::getOutputFile() const {
+  return outputFile;
 }
 
 std::optional<FilePaths> ProgramArgs::getFilePaths() const {

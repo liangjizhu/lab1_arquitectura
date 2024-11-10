@@ -9,7 +9,8 @@
 
 # Ignorar directorio de entrada específico si no es parte del código fuente
 input/
-/output/
+/output-aos/
+/output-soa/
 
 # Ignorar archivos de salida generados por CMake o Make
 Makefile
