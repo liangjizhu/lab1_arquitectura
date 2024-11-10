@@ -1,7 +1,7 @@
 //
 // Created by liang on 4/10/24.
 //
-
+//NOLINTBEGIN(misc-no-recursion)
 #include "imageaos.hpp"
 #include "binaryio.hpp"
 #include "color.hpp"
@@ -555,3 +555,5 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     escribirPPM(outputFile, pixelList, width, height);
     std::cout << "Imagen modificada escrita en: " << outputFile << '\n';
 }
+
+//NOLINTEND(misc-no-recursion)

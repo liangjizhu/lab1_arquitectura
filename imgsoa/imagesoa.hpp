@@ -7,6 +7,7 @@
 
 #include <string>
 void processMaxLevel(const std::string& inputFile, int maxLevel);
+void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile);
 // Otras funciones para 'resize', 'cutfreq', etc.
 
 #endif //IMAGESOA_HPP

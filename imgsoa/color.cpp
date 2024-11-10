@@ -21,6 +21,6 @@ void ColorPalette::printPalette() const {
   for (size_t i = 0; i < size(); ++i) {
     std::cout << "Color " << i << " -> R: " << static_cast<int>(reds[i])
               << " G: " << static_cast<int>(greens[i])
-              << " B: " << static_cast<int>(blues[i]) << std::endl;
+              << " B: " << static_cast<int>(blues[i]) << '\n';
   }
 }

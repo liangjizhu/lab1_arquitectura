@@ -5,8 +5,10 @@
 #include "progargs.hpp"    // Incluir el manejo de argumentos
 #include "binaryio.hpp"    // Incluir el manejo de archivos binarios
 #include "imageinfo.hpp"   // Incluir la lógica de processInfo desde common
-
+#include "imgsoa/imagesoa.hpp"
+#include "imgsoa/imagesoa.cpp"
 #include <iostream>        // Para la salida estándar
+#include "imgsoa/color.hpp"
 
 int main(int argc, char* argv[]) {
     // Crear una instancia de ProgramArgs para gestionar los argumentos de línea de comandos
@@ -50,7 +52,14 @@ int main(int argc, char* argv[]) {
         } else if (command == "cutfreq") {
             // Comando 'cutfreq': cortar frecuencia
             int frequency = args.getCutFreq();
+            std::string inputFile = args.getInputFile();       // Obtener el archivo de entrada
+            std::string outputFile = args.getOutputFile();     // Obtener el archivo de salida (asegúrate de que esto exista en ProgramArgs)
+    
             std::cout << "Cutting frequency to: " << frequency << std::endl;
+
+            // Llama a la función processCutfreq con los argumentos correctos
+            processCutfreq(inputFile, frequency, outputFile);
+            return 0;
             // Aquí iría la lógica para ajustar la frecuencia del archivo
 
         } else if (command == "compress") {
