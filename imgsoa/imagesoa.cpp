@@ -34,9 +34,10 @@ constexpr size_t BUFFER_SIZE = 4096; // Puedes ajustar este valor según sea nec
 
 // Función de distancia cuadrada para evitar la raíz cuadrada
 double distanciaCuadrada(const Color& colora, const Color& colorb) {
-    return (colora.red - colorb.red) * (colora.red - colorb.red) +
-           (colora.green - colorb.green) * (colora.green - colorb.green) +
-           (colora.blue - colorb.blue) * (colora.blue - colorb.blue);
+    int dr = colora.red - colorb.red;
+    int dg = colora.green - colorb.green;
+    int db = colora.blue - colorb.blue;
+    return dr * dr + dg * dg + db * db;
 }
 
 std::tuple<std::vector<Color>, ColorPalette, std::vector<int>> readImageAndStoreColors(const std::string& inputFile) {
@@ -227,40 +228,44 @@ std::unique_ptr<KDNode> construirKDTree(ColorPalette& palette) {
 }
 
 // Búsqueda del vecino más cercano en el K-D Tree
-std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& node, const Color& colorObjetivo, int depth, ColorPalette& palette) {
-    if (!node) return {{0, 0, 0}, std::numeric_limits<double>::max()};
+std::pair<Color, double> buscarVecinoMasCercano(const std::unique_ptr<KDNode>& node, const Color& colorObjetivo, int depth, const ColorPalette& palette) {
+    if (!node) return {{0, 0, 0}, std::numeric_limits<double>::max()};  // Nodo nulo
 
+    // Calculamos el eje de partición
     size_t axis = static_cast<size_t>(depth) % 3;
-    auto currentColor = palette.getColor(node->colorIndex);
-    double distanciaActual = distanciaCuadrada(colorObjetivo, {std::get<0>(currentColor), std::get<1>(currentColor), std::get<2>(currentColor)});
 
-    Color mejorColor = {std::get<0>(currentColor), std::get<1>(currentColor), std::get<2>(currentColor)};
+    // Pre-cargamos el color directamente desde la paleta
+    auto colorTuple = palette.getColor(node->colorIndex);
+    Color currentColor{std::get<0>(colorTuple), std::get<1>(colorTuple), std::get<2>(colorTuple)};
+
+    // Calculamos la distancia cuadrada al color objetivo
+    double distanciaActual = distanciaCuadrada(colorObjetivo, currentColor);
+
+    // Inicializamos el mejor color y la mejor distancia
+    Color mejorColor = currentColor;
     double mejorDistancia = distanciaActual;
 
-    // Determinamos el siguiente nodo a visitar en función del eje de partición
-    std::unique_ptr<KDNode>& siguienteNodo = [&]() -> std::unique_ptr<KDNode>& {
-        switch (axis) {
-            case 0: return (colorObjetivo.red < std::get<0>(currentColor)) ? node->left : node->right;
-            case 1: return (colorObjetivo.green < std::get<1>(currentColor)) ? node->left : node->right;
-            case 2: return (colorObjetivo.blue < std::get<2>(currentColor)) ? node->left : node->right;
-            default: return node->left; // Para evitar advertencias del compilador
-        }
-    }();
+    // Determinamos el siguiente nodo a explorar basado en el eje de partición
+    const std::unique_ptr<KDNode>& siguienteNodo = (axis == 0 ? colorObjetivo.red < currentColor.red :
+                                                    axis == 1 ? colorObjetivo.green < currentColor.green :
+                                                                colorObjetivo.blue < currentColor.blue) ? node->left : node->right;
+    const std::unique_ptr<KDNode>& nodoOpuesto = (siguienteNodo == node->left) ? node->right : node->left;
 
+    // Llamada recursiva para explorar el siguiente nodo
     auto [colorVecino, distanciaVecino] = buscarVecinoMasCercano(siguienteNodo, colorObjetivo, depth + 1, palette);
-
     if (distanciaVecino < mejorDistancia) {
         mejorColor = colorVecino;
         mejorDistancia = distanciaVecino;
     }
 
-    // Comprobar si el color vecino es idéntico al color objetivo
-    if (mejorColor.red == colorObjetivo.red && mejorColor.green == colorObjetivo.green && mejorColor.blue == colorObjetivo.blue) {
-        // Si el color es idéntico al objetivo, exploramos el subárbol opuesto
-        std::unique_ptr<KDNode>& nodoOpuesto = (siguienteNodo == node->left) ? node->right : node->left;
-        auto [colorOpuesto, distanciaOpuesta] = buscarVecinoMasCercano(nodoOpuesto, colorObjetivo, depth + 1, palette);
+    // Poda temprana: solo exploramos el subárbol opuesto si la distancia al plano es menor que la mejor distancia
+    double distanciaAlPlano = (axis == 0 ? std::abs(colorObjetivo.red - currentColor.red) :
+                               axis == 1 ? std::abs(colorObjetivo.green - currentColor.green) :
+                                           std::abs(colorObjetivo.blue - currentColor.blue));
 
-        // Si encontramos un color en el subárbol opuesto que no sea idéntico y que esté más cerca, lo tomamos como el mejor
+    // Solo se explora el subárbol opuesto si la distancia al plano es pequeña
+    if (distanciaAlPlano < mejorDistancia) {
+        auto [colorOpuesto, distanciaOpuesta] = buscarVecinoMasCercano(nodoOpuesto, colorObjetivo, depth + 1, palette);
         if (distanciaOpuesta < mejorDistancia) {
             mejorColor = colorOpuesto;
             mejorDistancia = distanciaOpuesta;
@@ -269,11 +274,10 @@ std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& node, c
 
     return {mejorColor, mejorDistancia};
 }
-
 // Función de búsqueda de vecino más cercano
 
 
-std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, const Color& target, int depth) {
+/*std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, const Color& target, int depth) {
     if (!root) {
         // Si el nodo es nulo, devolvemos un valor con la máxima distancia posible
         return {Color{0, 0, 0}, std::numeric_limits<double>::max()};
@@ -313,11 +317,11 @@ std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, c
         }
     }
     return {mejorColor, mejorDistanciaCuadrada};
-}
+}*/
 
 
 // Función para encontrar el color más cercano para una lista de colores menos frecuentes
-std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const std::vector<Color>& coloresMenosFrecuentes) {
+/*std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const std::vector<Color>& coloresMenosFrecuentes) {
     std::vector<Color> coloresCercanos;
     coloresCercanos.reserve(coloresMenosFrecuentes.size()); // Reservar espacio para evitar redimensionamientos
 
@@ -330,7 +334,7 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
     }
 
     return coloresCercanos;
-}
+}*/
 
 // Función auxiliar para encontrar los colores menos frecuentes usando SOA
 std::vector<std::tuple<uint8_t, uint8_t, uint8_t>> encontrar_colores_menos_frecuentes_soa(const ColorPalette& palette, const std::vector<int>& frecuencias, int n) {
@@ -350,48 +354,59 @@ std::vector<std::tuple<uint8_t, uint8_t, uint8_t>> encontrar_colores_menos_frecu
 }
 
 void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
+    // Paso 1: Leer la imagen y obtener la información relevante
     auto[pixelList, colorPalette, colorFrequencies] = readImageAndStoreColors(inputFile);
     auto[width, height] = getPPMDimensions(inputFile);
 
-    // Encontrar los colores menos frecuentes
+    // Paso 2: Encontrar los colores menos frecuentes
     std::cout << "Encontrando colores menos frecuentes" << '\n';
     auto menos_frecuentes = encontrar_colores_menos_frecuentes_soa(colorPalette, colorFrequencies, numColors);
 
-    // Construir un conjunto de colores menos frecuentes para facilitar la búsqueda
+    // Paso 3: Crear un conjunto con los colores menos frecuentes (optimización de la inserción)
     std::unordered_set<std::tuple<uint8_t, uint8_t, uint8_t>> coloresMenosFrecuentesSet;
     for (const auto& color : menos_frecuentes) {
-        coloresMenosFrecuentesSet.insert(color);
+        coloresMenosFrecuentesSet.emplace(color);  // Usamos emplace para evitar copiar el valor
     }
 
-    // Filtrar los colores en el ColorPalette para excluir los colores menos frecuentes
+    // Paso 4: Filtrar los colores restantes usando unordered_set (más eficiente que std::find)
     std::vector<size_t> indicesRestantes;
     for (size_t i = 0; i < colorPalette.size(); ++i) {
         auto color = colorPalette.getColor(i);
         auto colorTuple = std::make_tuple(std::get<0>(color), std::get<1>(color), std::get<2>(color));
         if (coloresMenosFrecuentesSet.find(colorTuple) == coloresMenosFrecuentesSet.end()) {
-            indicesRestantes.push_back(i); // Solo agregar los índices de los colores que no son menos frecuentes
+            indicesRestantes.push_back(i);  // Solo agregamos los colores que no son menos frecuentes
         }
     }
 
-    // Construir el K-D Tree con los colores restantes
+    // Paso 5: Construir el K-D Tree con los colores restantes
     std::cout << "Construyendo el K-D Tree con los colores restantes:" << indicesRestantes.size() << '\n';
     auto kdTreeRoot = construirKDTreeRecursivo(colorPalette, indicesRestantes, 0);
 
+    // Paso 6: Buscar los colores más cercanos para los colores menos frecuentes
     std::cout << "Buscando colores más cercanos" << '\n';
     std::unordered_map<std::tuple<uint8_t, uint8_t, uint8_t>, std::tuple<uint8_t, uint8_t, uint8_t>> sustituciones;
 
+    // Precalcular las tuplas de colores menos frecuentes
+    std::unordered_map<std::tuple<uint8_t, uint8_t, uint8_t>, Color> colorMap;
+    for (const auto& color : menos_frecuentes) {
+        colorMap[color] = {std::get<0>(color), std::get<1>(color), std::get<2>(color)};
+    }
+
+    // Buscar el vecino más cercano para cada color menos frecuente
     for (const auto& color_menos_frecuente : menos_frecuentes) {
-        Color menosFrecuenteColor = {std::get<0>(color_menos_frecuente), std::get<1>(color_menos_frecuente), std::get<2>(color_menos_frecuente)};
+        Color menosFrecuenteColor = colorMap[color_menos_frecuente];  // Usar el mapa precalculado
         auto [colorMasCercano, minDistancia] = buscarVecinoMasCercano(kdTreeRoot, menosFrecuenteColor, 0, colorPalette);
 
-        // Verificar que el color sustituto no sea uno de los colores menos frecuentes
+        // Verificar que el color sustituido no sea uno de los menos frecuentes
         auto sustituto = std::make_tuple(colorMasCercano.red, colorMasCercano.green, colorMasCercano.blue);
-        if (std::find(menos_frecuentes.begin(), menos_frecuentes.end(), sustituto) == menos_frecuentes.end()) {
+        if (coloresMenosFrecuentesSet.find(sustituto) == coloresMenosFrecuentesSet.end()) {
             sustituciones[color_menos_frecuente] = sustituto;
         }
     }
+
     std::cout << "Número de sustituciones creadas: " << sustituciones.size() << '\n';
 
+    // Paso 7: Sustituir los colores en la lista de píxeles
     std::cout << "Sustituyendo colores menos frecuentes" << '\n';
     for (auto& pixel : pixelList) {
         auto colorTuple = std::make_tuple(pixel.red, pixel.green, pixel.blue);
@@ -403,5 +418,274 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
         }
     }
 
+    // Paso 8: Escribir el archivo de salida
     escribirPPM(outputFile, pixelList, width, height);
 }
+
+/*//PRUEBAS CON GRID
+
+#include "imagesoa.hpp"
+#include "color.hpp"
+#include "color.cpp"
+#include <iostream>
+#include <fstream>
+#include <cmath>
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <string>
+#include <unordered_set>
+#include <memory>
+#include <tuple>
+#include <limits>
+#include <cstdint>
+
+constexpr int MAX_COLOR_VALUE = 255;
+constexpr size_t BUFFER_SIZE = 4096; // Ajusta según sea necesario
+
+// Función para calcular la distancia cuadrada entre dos colores
+double distanciaCuadrada(const Color& colora, const Color& colorb) {
+    return (colora.red - colorb.red) * (colora.red - colorb.red) +
+           (colora.green - colorb.green) * (colora.green - colorb.green) +
+           (colora.blue - colorb.blue) * (colora.blue - colorb.blue);
+}
+
+// Función para leer imagen y almacenar los colores en un vector
+std::tuple<std::vector<Color>, ColorPalette, std::vector<int>> readImageAndStoreColors(const std::string& inputFile) {
+    std::cout << "Leyendo imagen de: " << inputFile << '\n';
+
+    std::ifstream file(inputFile, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
+        return {{}, {}, {}};
+    }
+
+    std::string format;
+    int width = 0, height = 0, maxColorValue = 0;
+    file >> format >> width >> height >> maxColorValue;
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    if (format != "P6" || maxColorValue != 255) {
+        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << '\n';
+        return {{}, {}, {}};
+    }
+
+    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height);
+    std::vector<Color> pixelList;
+    pixelList.reserve(totalPixels);
+
+    std::vector<int> directColorFrequency(256 * 256 * 256, 0); // Para contar las frecuencias
+
+    std::vector<uint8_t> buffer(BUFFER_SIZE);
+    size_t pixelsRead = 0;
+    size_t colorIndex;
+
+    while (pixelsRead < totalPixels) {
+        size_t pixelsToRead = std::min(BUFFER_SIZE / 3, totalPixels - pixelsRead);
+        file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(pixelsToRead * 3));
+
+        for (size_t i = 0; i < pixelsToRead; ++i) {
+            uint8_t red = buffer[i * 3];
+            uint8_t green = buffer[i * 3 + 1];
+            uint8_t blue = buffer[i * 3 + 2];
+
+            colorIndex = (static_cast<size_t>(red) << 16) | 
+                         (static_cast<size_t>(green) << 8) | 
+                         blue;
+
+            pixelList.push_back({red, green, blue});
+            directColorFrequency[colorIndex]++;
+        }
+        pixelsRead += pixelsToRead;
+    }
+
+    file.close();
+
+    ColorPalette colorPalette;
+    std::vector<int> colorFrequencies;
+
+    for (size_t i = 0; i < directColorFrequency.size(); ++i) {
+        if (directColorFrequency[i] > 0) {
+            uint8_t red = (i >> 16) & 0xFF;
+            uint8_t green = (i >> 8) & 0xFF;
+            uint8_t blue = i & 0xFF;
+            colorPalette.addColor(red, green, blue);
+            colorFrequencies.push_back(directColorFrequency[i]);
+        }
+    }
+
+    return {pixelList, colorPalette, colorFrequencies};
+}
+
+// Función para encontrar los n colores menos frecuentes
+std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int>& frecuencia, int n) {
+    std::vector<std::pair<Color, int>> colores_frecuentes(frecuencia.begin(), frecuencia.end());
+    std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), 
+        [](const auto& colora, const auto& colorb) {
+            return colora.second < colorb.second;
+        }
+    );
+
+    std::vector<Color> menos_frecuentes;
+    for (size_t i = 0; i < static_cast<size_t>(n) && i < colores_frecuentes.size(); ++i) {
+        menos_frecuentes.push_back(colores_frecuentes[i].first);
+    }
+    return menos_frecuentes;
+}
+
+// Función para asignar colores a celdas del grid
+std::tuple<int, int, int> asignarCelda(const Color& color) {
+    constexpr int GRID_SIZE = 16; // Define el tamaño del grid
+    int x = static_cast<int>(color.red * (GRID_SIZE - 1) / 255.0);
+    int y = static_cast<int>(color.green * (GRID_SIZE - 1) / 255.0);
+    int z = static_cast<int>(color.blue * (GRID_SIZE - 1) / 255.0);
+    return {x, y, z};
+}
+
+// Función para buscar el vecino más cercano usando el grid
+std::pair<Color, double> buscarVecinoMasCercanoEnGrid(const Color& colorObjetivo, const std::vector<std::vector<std::vector<std::vector<Color>>>>& grid) {
+    constexpr int GRID_SIZE = 16; // Asegúrate de que coincida con el valor usado en asignarCelda
+    auto [cx, cy, cz] = asignarCelda(colorObjetivo);
+
+    double mejorDistancia = std::numeric_limits<double>::max();
+    Color mejorColor = {0, 0, 0};
+
+    for (int dx = -1; dx <= 1; ++dx) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dz = -1; dz <= 1; ++dz) {
+                int nx = cx + dx;
+                int ny = cy + dy;
+                int nz = cz + dz;
+
+                if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && nz >= 0 && nz < GRID_SIZE) {
+                    for (const auto& vecino : grid[nx][ny][nz]) {
+                        double distancia = distanciaCuadrada(colorObjetivo, vecino);
+                        if (distancia < mejorDistancia) {
+                            mejorDistancia = distancia;
+                            mejorColor = vecino;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return {mejorColor, mejorDistancia};
+}
+std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
+    int width = 0;
+    int height = 0;
+    std::string format;
+    int maxColorValue = 0;
+
+    // Abrir archivo de entrada en modo texto
+    std::ifstream file(inputFile);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
+        return {width, height}; // Retorna dimensiones 0 si falla
+    }
+
+    // Leer el encabezado del archivo PPM
+    file >> format >> width >> height >> maxColorValue;
+
+    // Verificar el formato y el valor máximo de color
+    if (format != "P6" && format != "P3") { // P3 es el formato ASCII, P6 es binario
+        std::cerr << "Error: Formato PPM no soportado en " << inputFile << '\n';
+        return {width, height}; // Retorna dimensiones leídas hasta el momento
+    }
+
+    // Ignorar el salto de línea después del encabezado
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    // Cerrar el archivo
+    file.close();
+
+    return {width, height}; // Retornar ancho y alto
+}
+
+void escribirPPM(const std::string& filename, const std::vector<Color>& pixels, int width, int height) {
+    std::ofstream outputFile(filename, std::ios::binary);
+    if (!outputFile) {
+        std::cout << "Error: No se pudo abrir el archivo para escribir: " << filename << '\n';
+        throw std::runtime_error("No se pudo abrir el archivo para escribir");
+    }
+
+    outputFile << "P6\n" << width << " " << height << "\n255\n";
+    for (const auto& pixel : pixels) {
+        outputFile.put(static_cast<char>(pixel.red));
+        outputFile.put(static_cast<char>(pixel.green));
+        outputFile.put(static_cast<char>(pixel.blue));
+    }
+    std::cout << "Archivo PPM escrito exitosamente: " << filename << '\n';
+}
+
+std::vector<std::vector<std::vector<std::vector<Color>>>> construirGrid(const ColorPalette& colorPalette, const std::vector<size_t>& indicesRestantes, int gridSize) {
+    std::vector<std::vector<std::vector<std::vector<Color>>>> grid(gridSize, std::vector<std::vector<std::vector<Color>>>(gridSize, std::vector<std::vector<Color>>(gridSize)));
+
+    for (size_t idx : indicesRestantes) {
+        auto colorTuple = colorPalette.getColor(idx);
+        Color color{std::get<0>(colorTuple), std::get<1>(colorTuple), std::get<2>(colorTuple)};
+        auto [x, y, z] = asignarCelda(color);
+        grid[x][y][z].push_back(color);
+    }
+
+
+    return grid;
+}
+std::vector<std::tuple<uint8_t, uint8_t, uint8_t>> encontrar_colores_menos_frecuentes_soa(const ColorPalette& palette, const std::vector<int>& frecuencias, int n) {
+    std::vector<size_t> indices(frecuencias.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    
+    std::sort(indices.begin(), indices.end(), [&frecuencias](size_t i1, size_t i2) {
+        return frecuencias[i1] < frecuencias[i2];
+    });
+
+    std::vector<std::tuple<uint8_t, uint8_t, uint8_t>> menos_frecuentes;
+    for (size_t i = 0; i < static_cast<size_t>(n) && i < indices.size(); ++i) {
+        menos_frecuentes.push_back(palette.getColor(indices[i]));
+    }
+    std::cout << "Colores menos frecuentes encontrados:" << menos_frecuentes.size() << '\n';
+    return menos_frecuentes;
+}
+
+// Función principal para procesar la imagen, realizar sustituciones y guardar la nueva imagen
+void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
+    auto[pixelList, colorPalette, colorFrequencies] = readImageAndStoreColors(inputFile);
+    auto[width, height] = getPPMDimensions(inputFile);
+
+    std::cout << "Encontrando colores menos frecuentes\n";
+    auto menos_frecuentes = encontrar_colores_menos_frecuentes_soa(colorPalette, colorFrequencies, numColors);
+
+    // Construir el grid con los colores restantes
+    std::cout << "Construyendo el Grid con los colores restantes\n";
+    std::vector<size_t> indicesRestantes;
+    for (size_t i = 0; i < colorPalette.size(); ++i) {
+        auto color = colorPalette.getColor(i);
+        if (std::find(menos_frecuentes.begin(), menos_frecuentes.end(), color) == menos_frecuentes.end()) {
+            indicesRestantes.push_back(i);
+        }
+    }
+    auto grid = construirGrid(colorPalette, indicesRestantes, 32);  // Tamaño del grid ajustable
+
+    std::cout << "Buscando colores más cercanos\n";
+    std::unordered_map<std::tuple<uint8_t, uint8_t, uint8_t>, Color> sustituciones;
+
+    // Realizar sustituciones
+    for (const auto& color_menos_frecuente : menos_frecuentes) {
+        Color colorTemp{std::get<0>(color_menos_frecuente), std::get<1>(color_menos_frecuente), std::get<2>(color_menos_frecuente)};
+        auto [colorMasCercano, _] = buscarVecinoMasCercanoEnGrid(colorTemp, grid);
+        sustituciones[color_menos_frecuente] = colorMasCercano;
+    }
+
+    // Sustituir colores en los píxeles de la imagen
+    for (auto& pixel : pixelList) {
+        auto colorTuple = std::make_tuple(pixel.red, pixel.green, pixel.blue);
+        if (sustituciones.find(colorTuple) != sustituciones.end()) {
+            pixel = sustituciones[colorTuple];
+        }
+    }
+
+    // Escribir la imagen resultante
+    escribirPPM(outputFile, pixelList, width, height);
+}*/
