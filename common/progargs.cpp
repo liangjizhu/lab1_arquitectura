@@ -51,6 +51,11 @@ bool ProgramArgs::validate() const{
 
 }
 
+std::string ProgramArgs::getOutputFile() const {
+  return outputFile;
+}
+
+
 bool ProgramArgs::validateInfo() const{
     if (args.size() != 3) {
         errorMessage = "Error: Invalid extra arguments for info";
@@ -79,13 +84,13 @@ bool ProgramArgs::validateMaxLevel() const{
 
 
 bool ProgramArgs::validateResize() const{
-    if (args.size() != RESIZE_ARGUMENT_COUNT) {
+    if (args.size() != 6) {
         errorMessage = "Error: Invalid number of extra arguments for resize";
         return false;
     }
     try {
-        int const width = std::stoi(args[3]);
-        int const height = std::stoi(args[4]);
+        int const width = std::stoi(args[4]);
+        int const height = std::stoi(args[5]);
         if (width <= 0 || height <= 0) {
             errorMessage = "Error: Invalid resize dimensions";
             return false;
@@ -152,22 +157,35 @@ int ProgramArgs::getMaxLevel() const {
 }
 
 int ProgramArgs::getResizeWidth() const {
-    try {
-        return std::stoi(args[3]);
-    } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid width value: " << e.what() << '\n';
-        return -1;
+  try {
+    int width = std::stoi(args[4]);
+    if (width <= 0) {
+      std::cerr << "Error: Width must be positive.\n";
+      return -1;
     }
+    std::cout << "Parsed width: " << width << std::endl;
+    return width;
+  } catch (const std::exception& e) {
+    std::cerr << "Error: Invalid width value: " << e.what() << '\n';
+    return -1;
+  }
 }
 
 int ProgramArgs::getResizeHeight() const {
-    try {
-        return std::stoi(args[4]);
-    } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid height value: " << e.what() << '\n';
-        return -1;
+  try {
+    int height = std::stoi(args[5]);
+    if (height <= 0) {
+      std::cerr << "Error: Height must be positive.\n";
+      return -1;
     }
+    std::cout << "Parsed height: " << height << std::endl;
+    return height;
+  } catch (const std::exception& e) {
+    std::cerr << "Error: Invalid height value: " << e.what() << '\n';
+    return -1;
+  }
 }
+
 
 int ProgramArgs::getCutFreq() const {
     try {

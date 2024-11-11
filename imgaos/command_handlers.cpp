@@ -25,15 +25,43 @@ int handleMaxLevel(const ProgramArgs& args) {
 }
 
 int handleResize(const ProgramArgs& args) {
-    if (!args.validateResize()) {
-        std::cerr << args.getErrorMessage() << '\n';
-        return -1;
-    }
-    int const width = args.getResizeWidth();
-    int const height = args.getResizeHeight();
-    std::cout << "Resizing to " << width << "x" << height << '\n';
-    // Aquí iría la lógica para redimensionar el archivo
-    return 0;
+  if (!args.validateResize()) {
+    std::cerr << args.getErrorMessage() << '\n';
+    return -1;
+  }
+
+  int const width = args.getResizeWidth();
+  int const height = args.getResizeHeight();
+  std::cout << "Resizing to " << width << "x" << height << '\n';
+
+  int originalWidth, originalHeight, maxColorValue;
+
+  // Leer la imagen PPM utilizando readPPM
+  std::vector<uint8_t> rawData = readPPM(args.getInputFile(), originalWidth, originalHeight, maxColorValue);
+
+  // Verificar que se haya leído correctamente la información de la imagen
+  if (originalWidth == 0 || originalHeight == 0) {
+    std::cerr << "Error: Could not retrieve image dimensions.\n";
+    return -1;
+  }
+
+  int channels = 3;  // Asumimos formato RGB para PPM (3 canales)
+
+  // Convertir el vector de datos en una estructura de imagen
+  Image originalImage = vectorToImage(rawData, originalWidth, originalHeight, channels);
+
+  // Redimensionar la imagen
+  Image resizedImage = resizeImageAoS(originalImage, width, height);
+
+  // Convertir la imagen redimensionada a un vector de bytes
+  std::vector<uint8_t> resizedData = imageToVector(resizedImage, channels);
+
+  // Escribir la imagen redimensionada a un archivo de salida PPM
+  writePPM(args.getOutputFile(), resizedData, width, height);
+
+  std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+
+  return 0;
 }
 
 int handleCutFreq(const ProgramArgs& args) {

@@ -12,6 +12,7 @@ struct PPMHeader {
 
 bool readPPMHeader(const std::string& inputFile, PPMHeader& header);
 void processInfo(const std::string& inputFile);
+std::pair<int, int> getImageDimensions(const std::string& inputFile);
 
 #endif // IMAGEINFO_HPP
 

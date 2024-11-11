@@ -4,6 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <stdexcept>
+#include <fstream>
 
 bool readPPMHeader(const std::string& inputFile, PPMHeader& header) {
     std::vector<uint8_t> fileData;
@@ -56,3 +57,36 @@ void processInfo(const std::string& inputFile) {
         std::cout << "El archivo contiene suficientes datos de píxeles." << '\n';
     }
 }
+
+// Define getImageDimensions to read image width and height
+std::pair<int, int> getImageDimensions(const std::string& filename) {
+  std::ifstream file(filename, std::ios::binary);
+  if (!file.is_open()) {
+    throw std::runtime_error("Error: Unable to open file " + filename);
+  }
+
+  std::string format;
+  int width, height, maxColorValue;
+
+  // Read the format identifier
+  file >> format;
+  std::cout << "Format: " << format << std::endl;
+  if (format != "P6") {
+    throw std::runtime_error("Error: Unsupported PPM format (must be P6)");
+  }
+
+  // Read width, height, and max color value
+  file >> width >> height >> maxColorValue;
+  std::cout << "Width: " << width << ", Height: " << height << ", Max Color Value: " << maxColorValue << std::endl;
+
+  if (width <= 0 || height <= 0 || maxColorValue != 255) {
+    throw std::runtime_error("Error: Dimensiones o valor máximo de color no válidos.");
+  }
+
+  // Skip the newline after the header
+  file.ignore(256, '\n');
+
+  return {width, height};
+}
+
+
