@@ -252,7 +252,7 @@ void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<
 }
 
 void compressAoS(const FilePaths& paths) {
-    std::string outputFile = ensureCppmExtension(paths.outputFile);
+    std::string const outputFile = ensureCppmExtension(paths.outputFile);
 
     const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
     if (fileData.empty()) {

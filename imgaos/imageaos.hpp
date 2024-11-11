@@ -4,7 +4,6 @@
 #include "color.hpp"
 #include "imageinfo.hpp"
 #include "progargs.hpp"
-#include <string>
 #include <vector>
 #include <unordered_map>
 #include <cstdint>

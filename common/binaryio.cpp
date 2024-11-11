@@ -6,23 +6,23 @@
 
 // Lee un archivo binario y devuelve su contenido como un vector de bytes
 std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
-  std::ifstream file(filename, std::ios::binary);
+    std::ifstream file(filename, std::ios::binary);
 
-  if (!file.is_open()) {
-    throw std::runtime_error("Error: Unable to open file " + filename);
-  }
+    if (!file.is_open()) {
+        throw std::runtime_error("Error: Unable to open file " + filename);
+    }
 
-  file.seekg(0, std::ios::end);
-  std::streamsize const size = file.tellg();
-  file.seekg(0, std::ios::beg);
+    file.seekg(0, std::ios::end);
+    std::streamsize const size = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-  std::vector<uint8_t> buffer(static_cast<std::vector<uint8_t>::size_type>(size));
+    std::vector<uint8_t> buffer(static_cast<std::vector<uint8_t>::size_type>(size));
 
-  if (!file.read(std::bit_cast<char*>(buffer.data()), size)) {
-    throw std::runtime_error("Error: Failed to read the file " + filename);
-  }
+    if (!file.read(std::bit_cast<char*>(buffer.data()), size)) {
+        throw std::runtime_error("Error: Failed to read the file " + filename);
+    }
 
-  return buffer;
+    return buffer;
 }
 
 // Escribe el contenido de un vector de bytes en un archivo binario
@@ -39,9 +39,9 @@ void BinaryIO::writeBinaryFile(const std::string& filename, const std::vector<ui
 }
 
 struct PPMHeader {
-  int width;
-  int height;
-  int maxColorValue;
+    int width;
+    int height;
+    int maxColorValue;
 };
 
 std::vector<uint8_t> readPPMData(const std::string& filename, PPMHeader& header) {
