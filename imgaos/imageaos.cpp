@@ -239,8 +239,6 @@ void escribirPPM(const std::string& filename, const std::vector<Color>& pixeles,
     file.close();
 }
 
-
-
 std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColors(const std::string& inputFile) {
     std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << '\n';
     // Abrir archivo en modo binario
@@ -315,6 +313,7 @@ std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
 
     return {width, height}; // Retornar ancho y alto
 }
+
 struct KDNode {
     Color color;
     std::unique_ptr<KDNode> left;  // Cambiado a std::unique_ptr
@@ -435,114 +434,6 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
     return coloresCercanos;
 }
 
-std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColorsOptimized(const std::string& inputFile) {
-    // Leer el archivo completo de una vez
-    const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(inputFile);
-    if (fileData.empty()) {
-        std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << inputFile << '\n';
-        return {{}, {}};
-    }
-
-    // Leer el encabezado
-    PPMHeader header{};
-    if (!readPPMHeader(inputFile, header)) {
-        std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
-        return {{}, {}};
-    }
-
-    const size_t numPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
-    const size_t pixelSize = (header.maxColorValue > MAX_COLOR_VALUE_8BIT) ? 6 : 3;
-    const size_t pixelStart = fileData.size() - numPixels * pixelSize;
-
-    // Reservar espacio para mejorar rendimiento
-    std::vector<Color> imagePixels;
-    imagePixels.reserve(numPixels);
-    
-    std::unordered_map<Color, int> colorFrequency;
-    colorFrequency.reserve(COLOR_TABLE_RESERVE_SIZE);
-
-    // Procesar todos los píxeles de una vez
-    for (size_t i = pixelStart; i < fileData.size(); i += pixelSize) {
-        Color pixel = Color::fromBinary(&fileData[i], header);
-        imagePixels.push_back(pixel);
-        colorFrequency[pixel]++;
-    }
-
-    return {imagePixels, colorFrequency};
-}
-
-std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColorsFast(const std::string& inputFile) {
-    std::ifstream file(inputFile, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo: " << inputFile << '\n';
-        return {{}, {}};
-    }
-
-    // Lectura rápida del encabezado
-    std::string format;
-    int width = 0, height = 0, maxColorValue = 0;
-    file >> format >> width >> height >> maxColorValue;
-    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    if (format != "P6" || maxColorValue != MAX_COLOR_VALUE) {
-        std::cerr << "Error: Formato no soportado\n";
-        return {{}, {}};
-    }
-
-    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height);
-    
-    // Leer todos los datos de una vez
-    std::vector<unsigned char> buffer(totalPixels * 3);
-    file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
-    file.close();
-
-    // Pre-calcular el tamaño aproximado del hash map basado en una muestra
-    const size_t sampleSize = std::min(totalPixels, static_cast<size_t>(1000));
-    std::unordered_map<Color, int> tempColorFreq;
-    tempColorFreq.reserve(COLOR_TABLE_RESERVE_SIZE);
-    
-    for (size_t i = 0; i < sampleSize * 3; i += 3) {
-        const RGBColor rgb = {
-            static_cast<uint16_t>(buffer[i]),
-            static_cast<uint16_t>(buffer[i + 1]),
-            static_cast<uint16_t>(buffer[i + 2])
-        };
-        tempColorFreq[Color(rgb)]++;
-    }
-
-    // Usar el tamaño de la muestra para estimar el espacio necesario
-    const size_t estimatedUniqueColors = static_cast<size_t>(
-        static_cast<double>(tempColorFreq.size()) / static_cast<double>(sampleSize) * static_cast<double>(totalPixels) * 1.3
-    );
-
-    // Reservar espacio basado en la estimación
-    std::vector<Color> pixelList;
-    std::unordered_map<Color, int> colorFrequency;
-    pixelList.reserve(totalPixels);
-    colorFrequency.reserve(std::min(estimatedUniqueColors, totalPixels));
-
-    // Procesar en bloques más grandes para mejor localidad de caché
-    constexpr size_t BLOCK_SIZE = 1024 * 16; // 16KB blocks
-    const size_t numBlocks = (buffer.size() / 3 + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
-    for (size_t block = 0; block < numBlocks; ++block) {
-        const size_t startIdx = block * BLOCK_SIZE * 3;
-        const size_t endIdx = std::min(startIdx + BLOCK_SIZE * 3, buffer.size());
-
-        for (size_t i = startIdx; i < endIdx; i += 3) {
-            const RGBColor rgb = {
-                static_cast<uint16_t>(buffer[i]),
-                static_cast<uint16_t>(buffer[i + 1]),
-                static_cast<uint16_t>(buffer[i + 2])
-            };
-            const Color pixelColor(rgb);
-            pixelList.push_back(pixelColor);
-            colorFrequency[pixelColor]++;
-        }
-    }
-
-    return {pixelList, colorFrequency};
-}
 std::vector<Color> readPixelsFromImage(const std::string& inputFile, int width, int height) {
     std::cout << "Leyendo píxeles de la imagen: " << inputFile << '\n';
     std::ifstream file(inputFile, std::ios::binary);
@@ -583,9 +474,15 @@ std::vector<Color> readPixelsFromImage(const std::string& inputFile, int width, 
 std::unordered_map<Color, int> calculateColorFrequency(const std::vector<Color>& pixelList) {
     std::cout << "Calculando frecuencias de colores" << '\n';
     std::unordered_map<Color, int> colorFrequency;
+
+    // Reservar espacio para evitar realocaciones innecesarias
+    colorFrequency.reserve(100000);  // Ajusta este número según tus expectativas
+
+    // Usamos try_emplace para evitar búsquedas duplicadas
     for (const auto& color : pixelList) {
-        colorFrequency[color]++;
+        colorFrequency.try_emplace(color, 0).first->second++;
     }
+
     return colorFrequency;
 }
 
