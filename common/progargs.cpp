@@ -135,10 +135,6 @@ std::string ProgramArgs::getInputFile() const {
     return inputFile;
 }
 
-std::string ProgramArgs::getOutputFile() const {
-  return outputFile;
-}
-
 std::optional<FilePaths> ProgramArgs::getFilePaths() const {
     if (operation == "maxlevel" || operation == "resize" || operation == "cutfreq" || operation == "compress") {
         return FilePaths{inputFile, outputFile};
