@@ -8,7 +8,7 @@ constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr size_t COLOR_DATA_SIZE_16BIT = 6;
 constexpr size_t COLOR_DATA_SIZE_8BIT = 3;
-constexpr uint8_t BITS_PER_BYTE = 8;          // Nueva constante para los bits por byte
+constexpr uint8_t BITS_PER_BYTE = 8; // Nueva constante para los bits por byte
 constexpr uint8_t COLOR_COMPONENT_INDEX_BLUE_HIGH = 5; // Nueva constante para el índice del byte alto de azul (para el clang-tidy)
 
 // Constructor para inicializar colores

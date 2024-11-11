@@ -2,9 +2,9 @@
 # For example, you may have one *_test.cpp for each *.cpp in common
 add_executable(utest-img-aos
         imageaos_test.cpp
-        # other1_test.cpp
-        # other2_test.cpp
-        )
+        color_test.cpp
+        command_handlers_test.cpp
+)
 
 # Library dependencies
 target_link_libraries(utest-img-aos
@@ -13,3 +13,5 @@ target_link_libraries(utest-img-aos
         GTest::gtest_main
         Microsoft.GSL::GSL
 )
+
+add_test(NAME utest_img_aos COMMAND ${CMAKE_BINARY_DIR}/utest-img-aos/utest-img-aos)

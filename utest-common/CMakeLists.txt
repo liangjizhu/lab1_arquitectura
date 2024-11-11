@@ -14,4 +14,4 @@ target_link_libraries(utest-common
         Microsoft.GSL::GSL
 )
 
-add_test(NAME utest_common COMMAND utest_common)
+add_test(NAME utest_common COMMAND ${CMAKE_BINARY_DIR}/utest-common/utest-common)
