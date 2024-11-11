@@ -269,7 +269,8 @@ std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreC
     // Leer todos los datos de píxeles de una vez en un solo bloque
     std::vector<char> buffer(totalPixels * 3);  // Cambiamos a char para evitar reinterpret_cast
     file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));  // Ahora no es necesario reinterpret_cast
-    // Procesar el buffer en bloques de tres bytes para extraer los colores 
+    // Procesar el buffer en bloques de tres bytes para extraer los colores
+
     for (size_t i = 0; i < buffer.size(); i += 3) {
         const RGBColor rgbColor = {static_cast<uint16_t>(buffer[i]), 
                            static_cast<uint16_t>(buffer[i + 1]), 
@@ -542,59 +543,63 @@ std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreC
 
     return {pixelList, colorFrequency};
 }
-std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColorsOld(const std::string& inputFile) {
-    std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << std::endl;
-
-    // Abrir archivo en modo binario
+std::vector<Color> readPixelsFromImage(const std::string& inputFile, int width, int height) {
+    std::cout << "Leyendo píxeles de la imagen: " << inputFile << '\n';
     std::ifstream file(inputFile, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << std::endl;
-        return {{}, {}}; // Retorna ambos vacíos si falla
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
+        return {};
     }
 
-    // Leer el encabezado PPM
-    std::string format;
-    int width, height, maxColorValue;
-    file >> format >> width >> height >> maxColorValue;
-    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea
-    if (format != "P6" || maxColorValue != 255) {
-        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << std::endl;
-        return {{}, {}}; // Retorna ambos vacíos si hay error en formato
-    }
+    // Saltamos el encabezado PPM
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    // Usar size_t para cálculos de tamaño
-    size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height); // Asegúrate de que ambos sean size_t
-
-    // Preparar el vector de píxeles con capacidad reservada
+    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height);
     std::vector<Color> pixelList;
-    pixelList.reserve(totalPixels); // Cambiado a size_t
-
-    // Preparar el mapa de frecuencia de colores
-    std::unordered_map<Color, int> colorFrequency;
+    pixelList.reserve(totalPixels);
 
     // Leer todos los datos de píxeles de una vez en un solo bloque
-    std::vector<uint8_t> buffer(totalPixels * 3); // Cambiado a uint8_t y size_t
-    file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size())); // Asegúrate de que el tamaño se maneje correctamente
+    std::vector<char> buffer(totalPixels * 3);
+    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
 
     // Procesar el buffer en bloques de tres bytes para extraer los colores
     for (size_t i = 0; i < buffer.size(); i += 3) {
-        RGBColor rgbColor = {static_cast<uint16_t>(buffer[i]), static_cast<uint16_t>(buffer[i + 1]), static_cast<uint16_t>(buffer[i + 2])};
-        Color pixelColor(rgbColor);
-
-        // Agregar el color al vector y actualizar la frecuencia
+        const RGBColor rgbColor = {
+            static_cast<uint16_t>(buffer[i]),
+            static_cast<uint16_t>(buffer[i + 1]),
+            static_cast<uint16_t>(buffer[i + 2])
+        };
+        const Color pixelColor(rgbColor);
         pixelList.push_back(pixelColor);
-        colorFrequency[pixelColor]++;
     }
 
     file.close();
-    std::cout << "Píxeles leídos y frecuencias calculadas" << std::endl;
+    std::cout << "Píxeles leídos" << '\n';
+    return pixelList;
+}
+
+std::unordered_map<Color, int> calculateColorFrequency(const std::vector<Color>& pixelList) {
+    std::cout << "Calculando frecuencias de colores" << '\n';
+    std::unordered_map<Color, int> colorFrequency;
+    for (const auto& color : pixelList) {
+        colorFrequency[color]++;
+    }
+    return colorFrequency;
+}
+
+std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColorsTrial(const std::string& inputFile, int width, int height) {
+    std::vector<Color> pixelList = readPixelsFromImage(inputFile, width, height);
+    std::unordered_map<Color, int> colorFrequency = calculateColorFrequency(pixelList);
     return {pixelList, colorFrequency};
 }
 
 void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
     //Leyendo los píxeles es donde más tarda
     std::cout <<"Leyendo imagen y almacenando colores" << '\n';
-    auto[pixelList, colorTable] = readImageAndStoreColorsOld(inputFile);
+    auto [width, height] = getPPMDimensions(inputFile);
+    auto[pixelList, colorTable] = readImageAndStoreColorsTrial(inputFile, width, height);
     std::cout << "Número de colores en la imagen: " << colorTable.size() << '\n';
     // Encontrar los colores menos frecuentes
     std::vector<Color> menos_frecuentes = encontrar_colores_menos_frecuentes(colorTable, numColors);
@@ -628,7 +633,6 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
         }
     }
     // Obtener dimensiones de la imagen y guardar la imagen resultante
-    auto [width, height] = getPPMDimensions(inputFile);
     escribirPPM(outputFile, pixelList, width, height);
     std::cout << "Imagen modificada escrita en: " << outputFile << '\n';
 }

@@ -20,7 +20,7 @@ class Color {
 
     // Constructor para inicializar colores
     explicit Color(RGBColor color) noexcept;
-    Color() : rgb{0, 0, 0} {} // Default constructor
+    Color() : rgb{0, 0, 0} {} // Constructor predeterminado
     // Cargar color desde datos binarios según maxColorValue en header
     [[nodiscard]] static Color fromBinary(const uint8_t* data, const PPMHeader& header) noexcept;
 
