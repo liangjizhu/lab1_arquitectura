@@ -2,10 +2,9 @@
 #include "binaryio.hpp"
 #include "imageinfo.hpp"
 #include "imageaos.hpp"
-
 #include <iostream>
 #include <chrono>
-
+void processCutfreq(const std::string& inputFile, int frequency, const std::string& outputFile);
 int handleInfo(const ProgramArgs& args) {
     if (!args.validateInfo()) {
         std::cerr << args.getErrorMessage() << '\n';
@@ -43,6 +42,8 @@ int handleCutFreq(const ProgramArgs& args) {
     }
     int const frequency = args.getCutFreq();
     std::cout << "Cutting frequency to: " << frequency << '\n';
+    processCutfreq(args.getInputFile(), frequency, args.getOutputFile());
+
     // Aquí iría la lógica para ajustar la frecuencia del archivo
     return 0;
 }
