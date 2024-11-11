@@ -3,8 +3,8 @@
 add_executable(utest-common
         progargs_test.cpp
         binaryio_test.cpp
-        # other2_test.cpp
-        )
+        imageinfo_test.cpp
+)
 
 # Library dependencies
 target_link_libraries(utest-common
@@ -13,3 +13,5 @@ target_link_libraries(utest-common
         GTest::gtest_main
         Microsoft.GSL::GSL
 )
+
+add_test(NAME utest_common COMMAND utest_common)

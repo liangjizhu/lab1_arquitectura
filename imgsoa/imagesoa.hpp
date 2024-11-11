@@ -1,12 +1,46 @@
-//
-// Created by liang on 4/10/24.
-//
-
 #ifndef IMAGESOA_HPP
 #define IMAGESOA_HPP
 
-#include <string>
-void processMaxLevel(const std::string& inputFile, int maxLevel);
-// Otras funciones para 'resize', 'cutfreq', etc.
+#include "imageinfo.hpp"
+#include "color.hpp"
+#include "progargs.hpp"
 
-#endif //IMAGESOA_HPP
+#include <string>
+#include <vector>
+#include <cstdint>
+#include <unordered_map>
+#include <tuple>
+
+
+
+// COMPRESS
+// Función para la compresión usando Structure of Arrays (SoA)
+void compressSoA(const FilePaths& paths);
+
+// Crear índice de colores
+std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable);
+
+// Ordenar la tabla de colores en orden lexicográfico RGB
+std::vector<size_t> sortColorTable(ColorChannels& colorTable);
+
+// Crear tabla de colores ordenada
+ColorChannels createSortedColorTable(const ColorChannels& colorTable, const std::vector<size_t>& indices);
+
+// Reconstruir el índice de colores para la tabla ordenada
+std::unordered_map<std::string, int> rebuildColorIndex(const ColorChannels& sortedColorTable);
+
+// Crear tabla de colores y mapa de índices (SoA)
+std::tuple<ColorChannels, std::unordered_map<std::string, int>>
+createColorTableSoA(const ColorChannels& channels);
+
+// Añadir la tabla de colores al archivo comprimido
+void appendColorTableSoA(std::vector<uint8_t>& compressedData,
+                         const ColorChannels& colorTable,
+                         const PPMHeader& header);
+
+// Añadir los índices de los píxeles al archivo comprimido
+void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
+                           const ColorChannels& channels,
+                           const std::unordered_map<std::string, int>& colorIndex);
+
+#endif // IMAGESOA_HPP

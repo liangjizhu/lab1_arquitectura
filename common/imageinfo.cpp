@@ -58,6 +58,21 @@ void processInfo(const std::string& inputFile) {
     }
 }
 
+// COMPRESS
+// Reutilizar: Generar encabezado del archivo comprimido
+std::string generateHeader(const PPMHeader& header, int colorTableSize) {
+    std::ostringstream headerStream;
+    headerStream << "C6 " << header.width << " " << header.height << " " << header.maxColorValue << " " << colorTableSize << "\n";
+    return headerStream.str();
+}
+
+// Reutilizar: Función para asegurar que el archivo tenga la extensión ".cppm"
+std::string ensureCppmExtension(const std::string& filename) {
+    if (filename.find(".cppm") == std::string::npos) {
+        return filename + ".cppm";
+    }
+    return filename;
+}
 // Define getImageDimensions to read image width and height
 std::pair<int, int> getImageDimensions(const std::string& filename) {
   std::ifstream file(filename, std::ios::binary);

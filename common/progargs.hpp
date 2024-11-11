@@ -14,7 +14,7 @@ class ProgramArgs {
     public:
     ProgramArgs(const std::vector<std::string>& arguments);
 
-    [[nodiscard]] bool validate() const;
+    bool validate() const;
     [[nodiscard]] std::string getInputFile() const;
     [[nodiscard]] std::string getOutputFile() const;
     [[nodiscard]] std::string getOperation() const;
