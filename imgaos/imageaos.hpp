@@ -31,15 +31,15 @@ std::vector<uint8_t> imageToVector(const Image& image, int channels);
 Image resizeImageAoS(const Image& image, int newWidth, int newHeight);
 
 class ImageAOS {
-  public:
-  ImageAOS(int width, int height, const std::vector<uint8_t>& pixels);
+    public:
+    ImageAOS(int width, int height, const std::vector<uint8_t>& pixels);
 
-  void resize(int newWidth, int newHeight);
+    void resize(int newWidth, int newHeight);
 
-  private:
-  int width;
-  int height;
-  std::vector<uint8_t> pixels; // Almacena los píxeles en formato RGB
+    private:
+    int width;
+    int height;
+    std::vector<uint8_t> pixels; // Almacena los píxeles en formato RGB
 };
 
 

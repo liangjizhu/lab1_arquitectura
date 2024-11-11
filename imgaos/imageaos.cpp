@@ -283,6 +283,7 @@ void compressAoS(const FilePaths& paths) {
     BinaryIO::writeBinaryFile(outputFile, compressedData);
 }
 
+// RESIZE AOS
 Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int channels) {
   if (data.size() != static_cast<size_t>(width * height * channels)) {
     throw std::runtime_error("Data size does not match width, height, and channels.");

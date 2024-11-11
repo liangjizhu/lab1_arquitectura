@@ -10,6 +10,7 @@
 // Constantes descriptivas
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;  // Valor máximo para un color de 8 bits
 
+// COMPRESS
 // Caso de prueba para `extractImagePixels`
 TEST(ImageAosTest, ExtractImagePixels_8Bit) {
     constexpr PPMHeader header{2, 2, MAX_COLOR_VALUE_8BIT};
@@ -129,3 +130,7 @@ TEST(ImageAosTest, CompressAoS) {
     int const removeOutput = std::remove(outputFilename.c_str());
     EXPECT_EQ(removeOutput, 0);
 }
+// TODO
+// MAX LEVEL
+// ARGS RESIZE
+// ARGS CUTFREQ

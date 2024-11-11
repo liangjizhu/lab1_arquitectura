@@ -67,7 +67,7 @@ bool ProgramArgs::validateInfo() const{
 
 bool ProgramArgs::validateMaxLevel() const {
     if (args.size() != MAX_LEVEL_ARGUMENT_COUNT) {
-        errorMessage = "Error: Invalid number of arguments for 'maxlevel'. Expected: 5 (imtool input output-aos maxlevel xxx)";
+        errorMessage = "Error: Invalid number of arguments for 'maxlevel'. Expected: 5 (imtool in output-aos maxlevel xxx)";
         return false;
     }
     try {

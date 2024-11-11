@@ -3,13 +3,13 @@
 add_executable(utest-img-aos
         imageaos_test.cpp
         color_test.cpp
-        command_handlers_test.cpp
 )
 
 # Library dependencies
 target_link_libraries(utest-img-aos
         PRIVATE
         imgaos
+        common
         GTest::gtest_main
         Microsoft.GSL::GSL
 )
