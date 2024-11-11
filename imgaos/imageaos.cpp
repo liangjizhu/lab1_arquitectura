@@ -14,64 +14,81 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <filesystem>
 
 // TODO:
 //  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
+    std::string buffer = "";
+    int antiguaIntensidad;
+    int ancho = 0;
+    int anchoContador = 0;
     int contadorDeLineas = 0;
-    std::string maxIntensidadStr = "";
-    int maxIntensidadInt;
+    //int tipoConversion = 0; // Se podría usar 4 bits en vez de 8 
 
-    //TODO: HAY QUE MANEJAR DISTINTOS FORMATOS DE PPM 
-    //bool altaIntensidad;
+    std::vector<uint8_t> output = {};
 
-    //int contador = 0;
-    //int contador_aux = 0;
-    //uint8_t pet[2];
-    //uint16_t caster;
+    std::ofstream stream;
+    //stream.open("output1.ppm");
     
     //Leer archivo
     for (auto i = inputFile.begin(); i != inputFile.end(); ++i){
-        if (contadorDeLineas < 3){
-            std::cout << *i;
-        }
 
-        //Tener en cuenta las líneas (usando los newlines)
-        if (*i == '\n'){
-            //Ubicación de máxima intensidad en el archivo ppm
-            if (contadorDeLineas == 2){ 
-                std::cout << "Máxima intensidad: " << maxIntensidadStr << "\n";
-                maxIntensidadInt  = std::stoi(maxIntensidadStr);
-                
-                if (maxIntensidadInt < 256){
-                    std::cout << "Intensidad baja";
+        // Saltos de línea
+        if ((*i == '\n') && ((anchoContador == ancho) || (contadorDeLineas < 3))){
+
+            // Añadir al output la nueva instensidad
+            if (contadorDeLineas == 2){
+
+                // Extraer antigua intensidad
+                antiguaIntensidad = std::stoi(buffer);
+
+                if ((antiguaIntensidad < 256) && (maxLevel < 256))
+
+                buffer = std::to_string(static_cast<int>(maxLevel));
+                for (auto j = buffer.begin(); j != buffer.end(); ++j){
+                    output.push_back(static_cast<unsigned char>(*j));
                 }
             }
-            contadorDeLineas++;
-        } else if ((*i == ' ') || (*i == '\t')){
-            std::cout << "\ndo nothing\n";
-        } else {
-            if (contadorDeLineas == 2) {
-                maxIntensidadStr.append(1, static_cast<char>(*i));
+
+            // Añadir al output
+            if (contadorDeLineas < 3){
+                output.push_back(static_cast<unsigned char>(*i));
             }
-            //pet[contador] = *i;
-            //if (contadorDeLineas >= 3){
-                //if (contador >= 1){
-                    //caster = (static_cast<u_int16_t>(pet[0]) << 8) | pet[1];
-                    //contador = 0;
-                    //std::cout << "casted: " << caster << "\n";
-                //} else {
-                    //contador++;
-                //}
-            //}
+
+            // Aumentar contador de líneas
+            contadorDeLineas++;
+
+            // Reseatear buffer
+            buffer = "";
+
+        } else {
+
+            // Sacar ancho para analizar archivo
+            if (((ancho == 0) && (contadorDeLineas == 1)) || (contadorDeLineas == 2)){
+
+                // Checkear si es el fin del ancho
+                if ((*i == ' ')){
+                    ancho = std::stoi(buffer);
+                }
+
+                // Añadir char al buffer
+                buffer.append(1, static_cast<char>(*i));
+            }
+
+            // Añadir al output
+            if (contadorDeLineas < 2){
+                output.push_back(static_cast<unsigned char>(*i));
+            } else if (contadorDeLineas > 2){
+                output.push_back(static_cast<u_int8_t>((static_cast<int>(*i)) * maxLevel / antiguaIntensidad));
+
+            }
+
+            // Añadir ancho
+            anchoContador++;
+
         }
-        //contador_aux++;
     }
-
-    // Lógica para el comando 'maxlevel'
-    std::cout << "\nProcessing 'maxlevel' for file: " << inputFile.size() << " with max level: " << maxLevel << std::endl;
-
-    // Aquí iría la lógica para modificar el nivel máximo del archivo
 }
 
 // TODO

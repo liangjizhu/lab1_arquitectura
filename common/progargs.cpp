@@ -13,13 +13,13 @@ ProgramArgs::ProgramArgs(int argc, char* argv[]) {
 }
 
 bool ProgramArgs::validate() {
-    if (args.size() < 2) {
+    if (args.size() == 4) {
         errorMessage = "Error: Invalid number of arguments";
         return false;
     }
 
     // El primer argumento es el nombre del programa, el segundo es el comando
-    operation = args[2];
+    operation = args[3];
 
     // Validar el comando
     if (operation == "info" || operation == "maxlevel" || operation == "resize" ||
@@ -47,18 +47,18 @@ bool ProgramArgs::validateInfo() {
 }
 
 bool ProgramArgs::validateMaxLevel() {
-    if (args.size() != 4) {
+    if (args.size() != 5) {
         errorMessage = "Error: Invalid number of extra arguments for maxlevel";
         return false;
     }
     try {
-        int maxLevel = std::stoi(args[3]);
+        int maxLevel = std::stoi(args[4]);
         if (maxLevel < 0 || maxLevel > 65535) {
-            errorMessage = "Error: Invalid maxlevel: " + args[3];
+            errorMessage = "Error: Invalid maxlevel: " + args[4];
             return false;
         }
     } catch (const std::invalid_argument&) {
-        errorMessage = "Error: Invalid maxlevel: " + args[3];
+        errorMessage = "Error: Invalid maxlevel: " + args[4];
         return false;
     }
     return true;
@@ -123,7 +123,7 @@ std::string ProgramArgs::getErrorMessage() const {
 
 int ProgramArgs::getMaxLevel() const {
     try {
-        return std::stoi(args[3]);
+        return std::stoi(args[4]);
     } catch (const std::exception& e) {
         std::cerr << "Error: Invalid max level value: " << e.what() << std::endl;
         return -1;

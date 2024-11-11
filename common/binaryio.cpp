@@ -6,6 +6,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <cstdint>
+#include <iostream>
 
 // Lee un archivo binario y devuelve su contenido como un vector de bytes
 std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
@@ -27,6 +28,18 @@ std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
     }
 
     return buffer;
+}
+
+//QUIERO TERMINAR ESTO
+void BinaryIO::readBinaryFileModified(const std::string& filename) {
+//std::istream BinaryIO::readBinaryFileModified(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    
+    if (!file.is_open()) {
+        throw std::runtime_error("Error: Unable to open file " + filename);
+    }
+
+    //return inputStream;
 }
 
 // Escribe el contenido de un vector de bytes en un archivo binario
