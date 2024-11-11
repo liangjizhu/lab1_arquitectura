@@ -2,15 +2,15 @@
 #include <gtest/gtest.h>
 
 // Se asume que hay una carpeta llamada input donde cogeremos el archivo lake-small.pp para realizar pruebas con ella
-// Se asume que hay una carpeta llamada output donde hay un archivo test.cppm que es el resultado de las operaciones
+// Se asume que hay una carpeta llamada output-aos donde hay un archivo test.cppm que es el resultado de las operaciones
 
 // Caso de prueba para argumentos válidos de compresión
 TEST(ProgramArgsTest, Validate_ValidArguments_Compress) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output/test", "compress"};
+    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output-aos/test", "compress"};
     ProgramArgs const progArgs(args);
     EXPECT_TRUE(progArgs.validate());
     EXPECT_EQ(progArgs.getInputFile(), "input/lake-small.ppm");
-    EXPECT_EQ(progArgs.getOutputFile(), "output/test");
+    EXPECT_EQ(progArgs.getOutputFile(), "output-aos/test");
     EXPECT_EQ(progArgs.getOperation(), "compress");
 }
 
@@ -24,7 +24,7 @@ TEST(ProgramArgsTest, Validate_InvalidArguments_MissingParams) {
 
 // Caso de prueba para operación desconocida
 TEST(ProgramArgsTest, Validate_InvalidOperation) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output/test", "unknown"};
+    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output-aos/test", "unknown"};
     ProgramArgs const progArgs(args);
     EXPECT_FALSE(progArgs.validate());
     EXPECT_EQ(progArgs.getErrorMessage(), "Error: Invalid operation: unknown");
@@ -39,14 +39,14 @@ TEST(ProgramArgsTest, ValidateInfo_Valid) {
 
 // Caso de prueba para 'compress' con argumentos válidos
 TEST(ProgramArgsTest, ValidateCompress_Valid) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output/test", "compress"};
+    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output-aos/test", "compress"};
     ProgramArgs const progArgs(args);
     EXPECT_TRUE(progArgs.validateCompress());
 }
 
 // Caso de prueba para 'compress' con argumentos inválidos
 TEST(ProgramArgsTest, ValidateCompress_Invalid) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output/test", "compress", "100"};
+    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output-aos/test", "compress", "100"};
     ProgramArgs const progArgs(args);
     EXPECT_FALSE(progArgs.validateCompress());
     EXPECT_EQ(progArgs.getErrorMessage(), "Error: Invalid extra arguments for compress");
@@ -54,13 +54,13 @@ TEST(ProgramArgsTest, ValidateCompress_Invalid) {
 
 // Caso de prueba para obtener rutas de archivos
 TEST(ProgramArgsTest, GetFilePaths) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output/test", "compress"};
+    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input/lake-small.ppm", "output-aos/test", "compress"};
     ProgramArgs const progArgs(args);
     EXPECT_TRUE(progArgs.validate());
     auto filePaths = progArgs.getFilePaths();
     ASSERT_TRUE(filePaths.has_value());
     EXPECT_EQ(filePaths->inputFile, "input/lake-small.ppm");
-    EXPECT_EQ(filePaths->outputFile, "output/test");
+    EXPECT_EQ(filePaths->outputFile, "output-aos/test");
 }
 
 // Caso de prueba para operación no soportada en getFilePaths
