@@ -23,7 +23,7 @@ std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
     // Convertimos size a un tipo sin signo compatible con std::vector
     std::vector<uint8_t> buffer(static_cast<std::vector<uint8_t>::size_type>(size));
 
-    if (!file.read(static_cast<unsigned char*>(buffer.data()), size)) {
+    if (!file.read(reinterpret_cast<unsigned char*>(buffer.data()), size)) {
         throw std::runtime_error("Error: Failed to read the file " + filename);
     }
 

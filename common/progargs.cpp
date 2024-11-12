@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <iostream>
 
-ProgramArgs::ProgramArgs(int argc, char* argv[]) {
+ProgramArgs::ProgramArgs(int argc, char* std::array<>) {
     for (int i = 0; i < argc; ++i) {
         args.push_back(argv[i]);
     }
