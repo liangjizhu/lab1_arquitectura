@@ -1,4 +1,6 @@
 #include "color.hpp"
+#include <unordered_map>
+#include <iostream>
 
 constexpr uint16_t BYTE_MASK = 0xFF;
 constexpr uint8_t BITS_PER_BYTE = 8;
@@ -36,6 +38,40 @@ void ColorChannels::extractFromBinary(const std::vector<uint8_t>& fileData, cons
     }
 }
 
+void ColorChannels::extractFromBinaryWithFrequency(
+    const std::vector<uint8_t>& fileData, 
+    const PPMHeader& header, 
+    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, int>& colorFrequency) 
+{
+    // Asegurarse de que el tamaño del archivo es consistente con las dimensiones de la imagen
+    const size_t totalPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
+    if (fileData.size() < totalPixels * 3) {
+        std::cerr << "Error: Tamaño de datos inconsistente con las dimensiones de la imagen\n";
+        return;
+    }
+
+    // Redimensionar los canales si es necesario
+    redChannel.resize(totalPixels);
+    greenChannel.resize(totalPixels);
+    blueChannel.resize(totalPixels);
+
+    // Llenar cada canal con los valores correspondientes y calcular la frecuencia de cada color
+    for (size_t i = 0, j = 0; i < totalPixels; ++i, j += 3) {
+        uint16_t red = fileData[j];
+        uint16_t green = fileData[j + 1];
+        uint16_t blue = fileData[j + 2];
+
+        // Almacenar en los canales
+        redChannel[i] = red;
+        greenChannel[i] = green;
+        blueChannel[i] = blue;
+
+        // Crear una tupla RGB y actualizar su frecuencia
+        auto colorTuple = std::make_tuple(red, green, blue);
+        colorFrequency[colorTuple]++;
+    }
+}
+
 // Escribir datos binarios desde canales
 void ColorChannels::writeToBinary(std::vector<uint8_t>& buffer, const PPMHeader& header) const {
     auto append16Bits = [&buffer](uint16_t value) {
@@ -67,3 +103,4 @@ bool ColorChannels::areEqual(size_t index1, size_t index2) const {
 size_t ColorChannels::size() const {
     return redChannel.size();
 }
+
