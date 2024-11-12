@@ -1,7 +1,6 @@
 #include "imgsoa/imagesoa.hpp"
 #include "common/imageinfo.hpp"
 #include "imgsoa/color.hpp"
-#include "common/binaryio.hpp"
 #include <gtest/gtest.h>
 #include <unordered_map>
 #include <vector>
@@ -10,14 +9,16 @@
 // Constantes
 constexpr size_t TEST_SIZE = 4;
 constexpr uint16_t MAX_COLOR_8BIT = 255;
+constexpr uint16_t MID_COLOR_VALUE_8BIT = 128;
+constexpr uint16_t LOW_COLOR_VALUE_8BIT = 64;
 
 // COMPRESS
 // Caso de prueba para `buildColorIndex()`
 TEST(ImageSoATest, BuildColorIndex) {
     ColorChannels channels(TEST_SIZE);
-    channels.getRedChannel() = {255, 0, 255, 128};
-    channels.getGreenChannel() = {0, 255, 128, 255};
-    channels.getBlueChannel() = {128, 128, 0, 255};
+    channels.getRedChannel() = {MAX_COLOR_8BIT, 0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT};
+    channels.getGreenChannel() = {0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT, MAX_COLOR_8BIT};
+    channels.getBlueChannel() = {MID_COLOR_VALUE_8BIT, MID_COLOR_VALUE_8BIT, 0, MAX_COLOR_8BIT};
 
     ColorChannels colorTable(TEST_SIZE);
     auto colorIndex = buildColorIndex(channels, colorTable);
@@ -32,9 +33,9 @@ TEST(ImageSoATest, BuildColorIndex) {
 // Caso de prueba para `sortColorTable()`
 TEST(ImageSoATest, SortColorTable) {
     ColorChannels colorTable(TEST_SIZE);
-    colorTable.getRedChannel() = {255, 128, 0, 255};
-    colorTable.getGreenChannel() = {0, 255, 128, 255};
-    colorTable.getBlueChannel() = {128, 0, 255, 128};
+    colorTable.getRedChannel() = {MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT, 0, MAX_COLOR_8BIT};
+    colorTable.getGreenChannel() = {0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT, MAX_COLOR_8BIT};
+    colorTable.getBlueChannel() = {MID_COLOR_VALUE_8BIT, 0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT};
 
     auto indices = sortColorTable(colorTable);
 
@@ -48,28 +49,28 @@ TEST(ImageSoATest, SortColorTable) {
 // Caso de prueba para `createSortedColorTable()`
 TEST(ImageSoATest, CreateSortedColorTable) {
     ColorChannels colorTable(TEST_SIZE);
-    colorTable.getRedChannel() = {255, 128, 0, 255};
-    colorTable.getGreenChannel() = {0, 255, 128, 255};
-    colorTable.getBlueChannel() = {128, 0, 255, 128};
+    colorTable.getRedChannel() = {MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT, 0, MAX_COLOR_8BIT};
+    colorTable.getGreenChannel() = {0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT, MAX_COLOR_8BIT};
+    colorTable.getBlueChannel() = {MID_COLOR_VALUE_8BIT, 0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT};
 
-    std::vector<size_t> indices = {2, 1, 3, 0};
+    std::vector<size_t> const indices = {2, 1, 3, 0};
     auto sortedColorTable = createSortedColorTable(colorTable, indices);
 
     EXPECT_EQ(sortedColorTable.getRedChannel()[0], 0);
-    EXPECT_EQ(sortedColorTable.getGreenChannel()[0], 128);
-    EXPECT_EQ(sortedColorTable.getBlueChannel()[0], 255);
+    EXPECT_EQ(sortedColorTable.getGreenChannel()[0], MID_COLOR_VALUE_8BIT);
+    EXPECT_EQ(sortedColorTable.getBlueChannel()[0], MAX_COLOR_8BIT);
 
-    EXPECT_EQ(sortedColorTable.getRedChannel()[3], 255);
+    EXPECT_EQ(sortedColorTable.getRedChannel()[3], MAX_COLOR_8BIT);
     EXPECT_EQ(sortedColorTable.getGreenChannel()[3], 0);
-    EXPECT_EQ(sortedColorTable.getBlueChannel()[3], 128);
+    EXPECT_EQ(sortedColorTable.getBlueChannel()[3], MID_COLOR_VALUE_8BIT);
 }
 
 // Caso de prueba para `rebuildColorIndex()`
 TEST(ImageSoATest, RebuildColorIndex) {
     ColorChannels sortedColorTable(TEST_SIZE);
-    sortedColorTable.getRedChannel() = {0, 128, 255, 255};
-    sortedColorTable.getGreenChannel() = {128, 255, 255, 0};
-    sortedColorTable.getBlueChannel() = {255, 0, 128, 128};
+    sortedColorTable.getRedChannel() = {0, MID_COLOR_VALUE_8BIT, MAX_COLOR_8BIT, MAX_COLOR_8BIT};
+    sortedColorTable.getGreenChannel() = {MID_COLOR_VALUE_8BIT, MAX_COLOR_8BIT, MAX_COLOR_8BIT, 0};
+    sortedColorTable.getBlueChannel() = {MAX_COLOR_8BIT, 0, MID_COLOR_VALUE_8BIT, MID_COLOR_VALUE_8BIT};
 
     auto colorIndex = rebuildColorIndex(sortedColorTable);
 
@@ -82,9 +83,9 @@ TEST(ImageSoATest, RebuildColorIndex) {
 // Caso de prueba para `createColorTableSoA()`
 TEST(ImageSoATest, CreateColorTableSoA) {
     ColorChannels channels(TEST_SIZE);
-    channels.getRedChannel() = {255, 0, 255, 128};
-    channels.getGreenChannel() = {0, 255, 128, 255};
-    channels.getBlueChannel() = {128, 128, 0, 255};
+    channels.getRedChannel() = {MAX_COLOR_8BIT, 0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT};
+    channels.getGreenChannel() = {0, MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT, MAX_COLOR_8BIT};
+    channels.getBlueChannel() = {MID_COLOR_VALUE_8BIT, MID_COLOR_VALUE_8BIT, 0, MAX_COLOR_8BIT};
 
     auto [sortedColorTable, colorIndex] = createColorTableSoA(channels);
 
@@ -98,31 +99,31 @@ TEST(ImageSoATest, CreateColorTableSoA) {
 // Caso de prueba para `appendColorTableSoA()`
 TEST(ImageSoATest, AppendColorTableSoA) {
     ColorChannels colorTable(2);
-    colorTable.getRedChannel() = {255, 128};
-    colorTable.getGreenChannel() = {0, 255};
-    colorTable.getBlueChannel() = {128, 64};
+    colorTable.getRedChannel() = {MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT};
+    colorTable.getGreenChannel() = {0, MAX_COLOR_8BIT};
+    colorTable.getBlueChannel() = {MID_COLOR_VALUE_8BIT, LOW_COLOR_VALUE_8BIT};
 
     std::vector<uint8_t> compressedData;
-    PPMHeader header{2, 2, MAX_COLOR_8BIT};
+    PPMHeader const header{2, 2, MAX_COLOR_8BIT};
     appendColorTableSoA(compressedData, colorTable, header);
 
     ASSERT_EQ(compressedData.size(), 6);
-    EXPECT_EQ(compressedData[0], 255);
+    EXPECT_EQ(compressedData[0], MAX_COLOR_8BIT);
     EXPECT_EQ(compressedData[1], 0);
-    EXPECT_EQ(compressedData[2], 128);
-    EXPECT_EQ(compressedData[3], 128);
-    EXPECT_EQ(compressedData[4], 255);
-    EXPECT_EQ(compressedData[5], 64);
+    EXPECT_EQ(compressedData[2], MID_COLOR_VALUE_8BIT);
+    EXPECT_EQ(compressedData[3], MID_COLOR_VALUE_8BIT);
+    EXPECT_EQ(compressedData[4], MAX_COLOR_8BIT);
+    EXPECT_EQ(compressedData[5], LOW_COLOR_VALUE_8BIT);
 }
 
 // Caso de prueba para `appendPixelIndicesSoA()`
 TEST(ImageSoATest, AppendPixelIndicesSoA) {
     ColorChannels channels(2);
-    channels.getRedChannel() = {255, 128};
-    channels.getGreenChannel() = {0, 255};
-    channels.getBlueChannel() = {128, 64};
+    channels.getRedChannel() = {MAX_COLOR_8BIT, MID_COLOR_VALUE_8BIT};
+    channels.getGreenChannel() = {0, MAX_COLOR_8BIT};
+    channels.getBlueChannel() = {MID_COLOR_VALUE_8BIT, LOW_COLOR_VALUE_8BIT};
 
-    std::unordered_map<std::string, int> colorIndex = {
+    std::unordered_map<std::string, int> const colorIndex = {
         {"255,0,128", 0},
         {"128,255,64", 1}
     };

@@ -6,13 +6,10 @@
 
 #include <iostream>
 #include <fstream>
-#include <cmath>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
 #include <string>
-#include <sstream>
-#include <algorithm>
 
 // Constante descriptiva para el tamaño de reserva inicial de la tabla de colores
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
@@ -23,6 +20,7 @@ constexpr uint8_t BITS_PER_BYTE = 8;
 
 // TODO:
 //  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
+//  - clang-tidy
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
     int contadorDeLineas = 0;
     std::string maxIntensidadStr;

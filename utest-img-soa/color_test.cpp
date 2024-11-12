@@ -22,7 +22,7 @@ constexpr uint16_t EXAMPLE_GREEN_COLOR_VALUE = 150;
 constexpr uint16_t EXAMPLE_BLUE_COLOR_VALUE = 200;
 constexpr uint16_t EXAMPLE_DIFF_BLUE_COLOR_VALUE = 201;
 
-// Caso de prueba para el constructor y el método reserve()
+// Caso de prueba para el constructor y el metodo reserve()
 TEST(ColorChannelsTest, ConstructorAndReserve) {
     ColorChannels channels(TEST_CAPACITY);
     EXPECT_EQ(channels.getRedChannel().capacity(), TEST_CAPACITY);

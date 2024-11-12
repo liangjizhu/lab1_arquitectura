@@ -10,8 +10,8 @@ constexpr int BUFFER_SIZE = 128;
 using PcloseFunc = int (*)(FILE*);
 
 std::string getCommandOutput(const std::string& command) {
-    std::string const commandWithRedirect = command + " 2>&1"; // Redirigir stderr a stdout
-    std::vector<char> buffer(BUFFER_SIZE);
+    std::string const commandWithRedirect = command + " 2>&1";
+    std::string buffer(BUFFER_SIZE, '\0');
     std::string result;
 
     std::unique_ptr<FILE, PcloseFunc> const pipe(popen(commandWithRedirect.c_str(), "r"), pclose);
@@ -19,8 +19,8 @@ std::string getCommandOutput(const std::string& command) {
         throw std::runtime_error("Error al ejecutar el comando");
     }
 
-    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr) {
-        result += buffer.data();
+    while (fgets(buffer.data(), BUFFER_SIZE, pipe.get()) != nullptr) {
+        result += buffer;
     }
 
     return result;

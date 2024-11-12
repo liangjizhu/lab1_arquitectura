@@ -5,7 +5,7 @@
 #include <iostream>
 
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
-constexpr size_t RESIZE_ARGUMENT_COUNT = 5;
+constexpr size_t RESIZE_ARGUMENT_COUNT = 6;
 constexpr size_t MAX_LEVEL_ARGUMENT_COUNT = 5;
 
 // Constructor para inicializar los argumentos usando std::vector<std::string>
@@ -87,7 +87,7 @@ bool ProgramArgs::validateMaxLevel() const {
 }
 
 bool ProgramArgs::validateResize() const{
-    if (args.size() != 6) {
+    if (args.size() != RESIZE_ARGUMENT_COUNT) {
         errorMessage = "Error: Invalid number of extra arguments for resize";
         return false;
     }
@@ -166,7 +166,7 @@ int ProgramArgs::getResizeWidth() const {
       std::cerr << "Error: Width must be positive.\n";
       return -1;
     }
-    std::cout << "Parsed width: " << width << std::endl;
+    std::cout << "Parsed width: " << width << '\n';
     return width;
   } catch (const std::exception& e) {
     std::cerr << "Error: Invalid width value: " << e.what() << '\n';
@@ -181,7 +181,7 @@ int ProgramArgs::getResizeHeight() const {
       std::cerr << "Error: Height must be positive.\n";
       return -1;
     }
-    std::cout << "Parsed height: " << height << std::endl;
+    std::cout << "Parsed height: " << height << '\n';
     return height;
   } catch (const std::exception& e) {
     std::cerr << "Error: Invalid height value: " << e.what() << '\n';
