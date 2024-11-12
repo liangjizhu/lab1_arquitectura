@@ -194,7 +194,7 @@ void compressAoS(const FilePaths& paths) {
 const int MAX_COLOR_VALUE = 255;
 
 
-std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int>& frecuencia, int n) {
+std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int, HashColor>& frecuencia, int n) {
     
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
     std::vector<std::pair<Color, int>> colores_frecuentes(frecuencia.begin(), frecuencia.end());
@@ -239,7 +239,7 @@ void escribirPPM(const std::string& filename, const std::vector<Color>& pixeles,
     file.close();
 }
 
-void readImageAndStoreColors(const std::string& inputFile, std::vector<Color>& pixelList, std::unordered_map<Color, int>& colorFrequency) {
+void readImageAndStoreColors(const std::string& inputFile, std::vector<Color>& pixelList, std::unordered_map<Color, int, HashColor>& colorFrequency) {
     std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << '\n';
     // Abrir archivo en modo binario
     std::ifstream file(inputFile, std::ios::binary);
@@ -496,7 +496,7 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     //Leyendo los píxeles es donde más tarda
     std::cout <<"Leyendo imagen y almacenando colores" << '\n';
     std::vector<Color> pixelList;
-    std::unordered_map<Color, int> colorTable;
+    std::unordered_map<Color, int, HashColor> colorTable;
     auto [width, height] = getPPMDimensions(inputFile);
     readImageAndStoreColors(inputFile,pixelList,colorTable);
     std::cout << "Número de colores en la imagen: " << colorTable.size() << '\n';
@@ -531,6 +531,7 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
             pixel = sustituciones[pixel];
         }
     }
+    std::cout << "Escribiendo imagen modificada" << '\n';
     // Obtener dimensiones de la imagen y guardar la imagen resultante
     escribirPPM(outputFile, pixelList, width, height);
     std::cout << "Imagen modificada escrita en: " << outputFile << '\n';
