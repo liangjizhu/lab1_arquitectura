@@ -17,13 +17,13 @@ std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
     }
 
     file.seekg(0, std::ios::end);
-    std::streamsize size = file.tellg();
+    const std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
 
     // Convertimos size a un tipo sin signo compatible con std::vector
     std::vector<uint8_t> buffer(static_cast<std::vector<uint8_t>::size_type>(size));
 
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+    if (!file.read(static_cast<unsigned char*>(buffer.data()), size)) {
         throw std::runtime_error("Error: Failed to read the file " + filename);
     }
 
