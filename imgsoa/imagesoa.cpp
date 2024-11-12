@@ -167,7 +167,7 @@ void compressSoA(const FilePaths& paths){
 void readImageAndStoreChannels(
     const std::string& inputFile, 
     ColorChannels& colorChannels, 
-    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, int>& colorFrequency) 
+    std::unordered_map<uint32_t, int, HashColor>& colorFrequency) 
 {
     PPMHeader header{};
     if (!readPPMHeader(inputFile, header)) {
@@ -203,7 +203,7 @@ void readImageAndStoreChannels(
     // Leer todos los datos de píxeles en un solo bloque
     std::vector<uint8_t> buffer(totalPixels * 3); // Cada píxel tiene 3 componentes (RGB)
     file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
-
+    std::cout << "Extrayendo del binario\n";
     // Extraer los datos a los canales y calcular frecuencias
     colorChannels.extractFromBinaryWithFrequency(buffer, header, colorFrequency);
 
@@ -211,23 +211,27 @@ void readImageAndStoreChannels(
     std::cout << "Canales de color leídos y frecuencias de colores calculadas\n";
 }
 
-std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> encontrar_colores_menos_frecuentes(
-    const std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, int>& colorFrequency, int numColors) {
-    std::vector<std::pair<std::tuple<uint16_t, uint16_t, uint16_t>, int>> colores_frecuentes(colorFrequency.begin(), colorFrequency.end());
+std::vector<std::pair<std::tuple<uint16_t, uint16_t, uint16_t>, int>> encontrar_colores_menos_frecuentes(
+    const std::unordered_map<uint32_t, int, HashColor>& frecuencia, int n) {
+    std::vector<std::pair<std::tuple<uint16_t, uint16_t, uint16_t>, int>> colores_frecuentes;
+
+    for (const auto& [color, freq] : frecuencia) {
+        uint16_t red = (color >> 16) & 0xFF;
+        uint16_t green = (color >> 8) & 0xFF;
+        uint16_t blue = color & 0xFF;
+        colores_frecuentes.emplace_back(std::make_tuple(red, green, blue), freq);
+    }
 
     // Ordenar por frecuencia
     std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), [](const auto& a, const auto& b) {
         return a.second < b.second;
     });
 
-    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> menos_frecuentes;
-    menos_frecuentes.reserve(static_cast<size_t>(numColors));
-
-    for (size_t i = 0; i < static_cast<size_t>(numColors) && i < colores_frecuentes.size(); ++i) {
-        menos_frecuentes.push_back(colores_frecuentes[i].first);
+    if (colores_frecuentes.size() > static_cast<size_t>(n)) {
+        colores_frecuentes.resize(static_cast<size_t>(n));
     }
 
-    return menos_frecuentes;
+    return colores_frecuentes;
 }
 
 double calcularDistanciaEuclidiana(const std::tuple<uint16_t, uint16_t, uint16_t>& color1,
@@ -320,25 +324,42 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     const size_t totalPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
     std::cout << "Hay " << totalPixels << " píxeles en la imagen\n";
     ColorChannels colorChannels(totalPixels);
-    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, int> colorFrequency;
+    std::unordered_map<uint32_t, int, HashColor> colorFrequency;
+    std::cout << "Calculando frecuencias de colores\n";
     readImageAndStoreChannels(inputFile, colorChannels, colorFrequency);
-
+    std::cout << "Encontrando n menos frecuentes\n";
     // Ordenar las frecuencias y encontrar los n colores menos frecuentes
-    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> menosFrecuentes = encontrar_colores_menos_frecuentes(colorFrequency, numColors);
+    auto coloresFrecuentes = encontrar_colores_menos_frecuentes(colorFrequency, numColors);
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> menosFrecuentes;
+    for (const auto& par : coloresFrecuentes) {
+        menosFrecuentes.push_back(par.first);
+    }
     std::cout << "Hay " << menosFrecuentes.size() << " colores menos frecuentes\n";
     // Crear un conjunto con los colores menos frecuentes
     std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>> coloresMenosFrecuentesSet(menosFrecuentes.begin(), menosFrecuentes.end());
 
     // Hay que encontrar sus sustituciones
+    
     std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> coloresRestantes;
-    for (const auto& color : colorFrequency) {
-        if (coloresMenosFrecuentesSet.find(color.first) == coloresMenosFrecuentesSet.end()) {
-            coloresRestantes.push_back(color.first);
-        }
+
+// Iterar sobre los colores de la tabla de frecuencias
+for (const auto& color : colorFrequency) {
+    // Extraer el color como tupla de componentes RGB
+    std::tuple<uint16_t, uint16_t, uint16_t> colorTuple = std::make_tuple(
+        static_cast<uint16_t>((color.first >> 16) & 0xFF),  // Rojo
+        static_cast<uint16_t>((color.first >> 8) & 0xFF),   // Verde
+        static_cast<uint16_t>(color.first & 0xFF)           // Azul
+    );
+
+    // Si el color no está en los colores menos frecuentes, lo agregamos a la lista de colores restantes
+    if (coloresMenosFrecuentesSet.find(colorTuple) == coloresMenosFrecuentesSet.end()) {
+        coloresRestantes.push_back(colorTuple);
     }
+}
+
 
     std::cout << "Hay " << coloresRestantes.size() << " colores restantes (no menos frecuentes)\n";
-
+    std::cout << "Voy a encontrar sus sustituciones\n";
     sustituirColoresMenosFrecuentes(colorChannels,menosFrecuentes, coloresRestantes);
     std::cout << "Ahora los escribo en " << outputFile << '\n';
     writePPM(outputFile, header, colorChannels);

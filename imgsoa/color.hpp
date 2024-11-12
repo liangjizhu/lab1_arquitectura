@@ -7,6 +7,30 @@
 #include <cstdint>
 #include <cstddef>
 
+struct HashTuple {
+    size_t operator()(const std::tuple<uint16_t, uint16_t, uint16_t>& t) const {
+        // Obtener los tres elementos de la tupla
+        const uint16_t& r = std::get<0>(t);
+        const uint16_t& g = std::get<1>(t);
+        const uint16_t& b = std::get<2>(t);
+
+        // Generar un hash combinando los tres componentes (r, g, b)
+        size_t h1 = std::hash<uint16_t>{}(r);
+        size_t h2 = std::hash<uint16_t>{}(g);
+        size_t h3 = std::hash<uint16_t>{}(b);
+
+        // Combinamos los hashes de los tres valores
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
+    }
+};
+
+struct HashColor {
+    size_t operator()(uint32_t color) const {
+        // Usamos un simple hash de los bits de color
+        return std::hash<uint32_t>()(color);
+    }
+};
+
 // Clase para manejar los canales de color en SoA
 class ColorChannels {
     public:
@@ -34,7 +58,7 @@ class ColorChannels {
     void extractFromBinaryWithFrequency(
     const std::vector<uint8_t>& fileData, 
     const PPMHeader& header, 
-    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, int>& colorFrequency);
+    std::unordered_map<uint32_t, int, HashColor>& colorFrequency);
     // Metodo para comparar colores
     [[nodiscard]] bool areEqual(size_t index1, size_t index2) const;
 
@@ -59,6 +83,8 @@ namespace std {
         }
     };
 }
+
+
 /*struct Color {
     uint8_t red;
     uint8_t green;
