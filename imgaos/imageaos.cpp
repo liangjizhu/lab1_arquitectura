@@ -493,46 +493,48 @@ std::unordered_map<Color, int> calculateColorFrequency(const std::vector<Color>&
 }*/
 
 void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
-    //Leyendo los píxeles es donde más tarda
-    std::cout <<"Leyendo imagen y almacenando colores" << '\n';
+    std::cout << "Leyendo imagen y almacenando colores" << '\n';
     std::vector<Color> pixelList;
     std::unordered_map<Color, int, HashColor> colorTable;
     auto [width, height] = getPPMDimensions(inputFile);
-    readImageAndStoreColors(inputFile,pixelList,colorTable);
+    readImageAndStoreColors(inputFile, pixelList, colorTable);
     std::cout << "Número de colores en la imagen: " << colorTable.size() << '\n';
+
     // Encontrar los colores menos frecuentes
     std::vector<Color> menos_frecuentes = encontrar_colores_menos_frecuentes(colorTable, numColors);
+    
     // Filtrar colores frecuentes para construir el K-D Tree
-    std::unordered_set<Color> menosFrecuentesSet(menos_frecuentes.begin(), menos_frecuentes.end());
+    std::unordered_set<Color, HashColor> menosFrecuentesSet(menos_frecuentes.begin(), menos_frecuentes.end());
     std::vector<Color> coloresRestantes;
     for (const auto& [color, _] : colorTable) {
         if (menosFrecuentesSet.find(color) == menosFrecuentesSet.end()) {
             coloresRestantes.push_back(color);
         }
     }
+
     // Construir el K-D Tree con los colores restantes
     std::cout << "Construyendo K-D Tree" << '\n';
     std::unique_ptr<KDNode> kdTreeRoot = construirKDTree(coloresRestantes);
+
     // Mapear cada color menos frecuente a su color más cercano en el K-D Tree
     std::cout << "Buscando colores más cercanos" << '\n';
-    std::unordered_map<Color, Color> sustituciones;
+    std::unordered_map<Color, Color, HashColor> sustituciones;
+    sustituciones.reserve(menos_frecuentes.size()); // Reservamos espacio para el mapa de sustituciones
     for (const auto& color_menos_frecuente : menos_frecuentes) {
-    // Capturar el resultado de buscarVecinoMasCercano
-    auto [colorMasCercano, minDistancia] = buscarVecinoMasCercano(kdTreeRoot, color_menos_frecuente, 0);
-    
-    // Almacenar la sustitución en el mapa
-    sustituciones[color_menos_frecuente] = colorMasCercano;
+        auto [colorMasCercano, minDistancia] = buscarVecinoMasCercano(kdTreeRoot, color_menos_frecuente, 0);
+        sustituciones[color_menos_frecuente] = colorMasCercano;
     }
-    //Aquí tarda un buen rato
-    // Sustituir cada aparición de un color menos frecuente en la lista de píxeles
+
+    // Sustituir los colores directamente en la lista de píxeles de manera más eficiente
     std::cout << "Sustituyendo colores menos frecuentes" << '\n';
     for (auto& pixel : pixelList) {
-        if (sustituciones.find(pixel) != sustituciones.end()) {
-            pixel = sustituciones[pixel];
+        auto it = sustituciones.find(pixel);  // Solo se hace una búsqueda
+        if (it != sustituciones.end()) {
+            pixel = it->second;  // Sustituir directamente el color en memoria
         }
     }
+
     std::cout << "Escribiendo imagen modificada" << '\n';
-    // Obtener dimensiones de la imagen y guardar la imagen resultante
     escribirPPM(outputFile, pixelList, width, height);
     std::cout << "Imagen modificada escrita en: " << outputFile << '\n';
 }
