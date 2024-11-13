@@ -283,6 +283,49 @@ void readImageAndStoreColors(const std::string& inputFile, std::vector<Color>& p
 }
 
 
+void readImageAndStoreColors2(const std::string& inputFile, std::vector<Color>& pixelList, std::unordered_map<Color, int, HashColor>& colorFrequency) {
+    std::cout << "Leyendo imagen y almacenando colores de: " << inputFile << '\n';
+    // Abrir archivo en modo binario
+    std::ifstream file(inputFile, std::ios::binary);
+    std::string format;
+    int width = 0;
+    int height = 0;
+    int maxColorValue = 0;
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
+        return; // Retorna ambos vacíos si falla
+    }
+    // Leer el encabezado PPM
+    file >> format >> width >> height >> maxColorValue;
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea
+    if (format != "P6" || maxColorValue != MAX_COLOR_VALUE) {
+        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << '\n';
+        return; // Retorna ambos vacíos si hay error en formato
+    }
+    const size_t totalPixels = static_cast<size_t>(width) * static_cast<size_t>(height); // Asegúrate de que ambos sean size_t
+    //std::vector<Color> pixelList;
+
+    pixelList.reserve(totalPixels); // Cambiado a size_t
+    // Preparar el mapa de frecuencia de colores
+    //std::unordered_map<Color, int> colorFrequency;
+    // Leer todos los datos de píxeles de una vez en un solo bloque
+    std::vector<char> buffer(totalPixels * 3);  // Cambiamos a char para evitar reinterpret_cast
+    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));  // Ahora no es necesario reinterpret_cast
+    // Procesar el buffer en bloques de tres bytes para extraer los colores
+
+    for (size_t i = 0; i < buffer.size(); i += 3) {
+        const RGBColor rgbColor = {static_cast<uint16_t>(buffer[i]), 
+                           static_cast<uint16_t>(buffer[i + 1]), 
+                           static_cast<uint16_t>(buffer[i + 2])};
+        const Color pixelColor(rgbColor);
+        pixelList.push_back(pixelColor);
+        colorFrequency[pixelColor]++;
+    }
+    file.close();
+    std::cout << "Píxeles leídos y frecuencias calculadas" << '\n';
+    return;
+}
+
 std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
     int width = 0;
     int height = 0;

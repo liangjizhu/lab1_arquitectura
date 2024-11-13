@@ -38,7 +38,7 @@ struct HashColor {
         size_t h3 = std::hash<uint16_t>{}(color.rgb.blue);
         
         // Usamos un patrón común de combinar hashes
-        return h1 ^ (h2 << 1) ^ (h3 << 2); // Los desplazamientos y combinaciones son una técnica común
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
     }
 };
 
