@@ -1,4 +1,6 @@
 #include "color.hpp"
+#include <unordered_map>
+#include <iostream>
 
 constexpr uint16_t BYTE_MASK = 0xFF;
 constexpr uint8_t BITS_PER_BYTE = 8;
@@ -33,6 +35,47 @@ void ColorChannels::extractFromBinary(const std::vector<uint8_t>& fileData, cons
             greenChannel[i] = fileData[j + 1];
             blueChannel[i] = fileData[j + 2];
         }
+    }
+}
+
+void ColorChannels::extractFromBinaryWithFrequency(
+    const std::vector<uint8_t>& fileData, 
+    const PPMHeader& header, 
+    std::unordered_map<uint32_t, int, HashColor>& colorFrequency) 
+{
+    // Asegurarse de que el tamaño del archivo es consistente con las dimensiones de la imagen
+    const size_t totalPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
+    if (fileData.size() < totalPixels * 3) {
+        std::cerr << "Error: Tamaño de datos inconsistente con las dimensiones de la imagen\n";
+        return;
+    }
+
+    // Redimensionar los canales solo si no se ha hecho antes
+    redChannel.resize(totalPixels);
+    greenChannel.resize(totalPixels);
+    blueChannel.resize(totalPixels);
+
+    // Reservar espacio en el unordered_map para mejorar el rendimiento
+    colorFrequency.reserve(totalPixels);
+
+    // Llenar cada canal con los valores correspondientes y calcular la frecuencia de cada color
+    for (size_t i = 0, j = 0; i < totalPixels; ++i, j += 3) {
+        uint16_t red = fileData[j];
+        uint16_t green = fileData[j + 1];
+        uint16_t blue = fileData[j + 2];
+
+        // Almacenar en los canales
+        redChannel[i] = red;
+        greenChannel[i] = green;
+        blueChannel[i] = blue;
+
+        // Combinar los valores RGB en un solo valor uint32_t
+        uint32_t combinedColor = (static_cast<uint32_t>(red) << 16) | 
+                                 (static_cast<uint32_t>(green) << 8) | 
+                                 static_cast<uint32_t>(blue);
+
+        // Actualizar la frecuencia del color en el mapa
+        colorFrequency[combinedColor]++;
     }
 }
 

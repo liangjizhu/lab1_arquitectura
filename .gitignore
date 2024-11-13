@@ -11,6 +11,8 @@
 in/
 /output-aos/
 /output-soa/
+/output/
+/input/
 
 # Ignorar archivos de salida generados por CMake o Make
 Makefile

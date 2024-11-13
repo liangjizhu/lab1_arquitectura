@@ -106,12 +106,12 @@ bool ProgramArgs::validateResize() const{
 }
 
 bool ProgramArgs::validateCutFreq() const{
-    if (args.size() != 4) {
+    if (args.size() != 5) {
         errorMessage = "Error: Invalid number of extra arguments for cutfreq";
         return false;
     }
     try {
-        int const freq = std::stoi(args[3]);
+        int const freq = std::stoi(args[4]);
         if (freq <= 0) {
             errorMessage = "Error: Invalid cutfreq: " + args[3];
             return false;
@@ -192,7 +192,7 @@ int ProgramArgs::getResizeHeight() const {
 
 int ProgramArgs::getCutFreq() const {
     try {
-        return std::stoi(args[3]);
+        return std::stoi(args[4]);
     } catch (const std::exception& e) {
         std::cerr << "Error: Invalid cut frequency value: " << e.what() << '\n';
         return -1;
