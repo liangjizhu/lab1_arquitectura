@@ -908,6 +908,88 @@ void buscarVecinoMasCercanoOptimizado(KDNode* root, const std::tuple<uint16_t, u
     }
 }
 
+void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
+    std::ofstream outFile(outputFile);
+    if (!outFile.is_open()) {
+        std::cerr << "Error al abrir el archivo de salida: " << outputFile << '\n';
+        return;
+    }
+
+    // Escribir el encabezado
+    outFile << "P3\n";  // Formato de texto
+    outFile << "# Imagen procesada\n";
+    outFile << header.width << " " << header.height << "\n";
+    outFile << "255\n";  // Valor máximo para los colores
+
+    // Escribir los píxeles
+    const auto& reds = colorChannels.getRedChannel();
+    const auto& greens = colorChannels.getGreenChannel();
+    const auto& blues = colorChannels.getBlueChannel();
+
+    for (size_t i = 0; i < reds.size(); ++i) {
+        outFile << reds[i] << " " << greens[i] << " " << blues[i];
+        if (i != reds.size() - 1) {
+            outFile << " ";  // Separar cada píxel con un espacio
+        }
+        // Agregar salto de línea cada 5 píxeles por estética
+        if ((i + 1) % 5 == 0) {
+            outFile << "\n";
+        }
+    }
+
+    std::cout << "Imagen procesada escrita en: " << outputFile << '\n';
+}
+
+
+// Definir constantes para los desplazamientos y la máscara
+constexpr int SHIFT_RED = 16;
+constexpr int SHIFT_GREEN = 8;
+constexpr int MASK = 0xFF;
+
+
+std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrarColoresReemplazo(
+    const std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& colorsToRemoveSet,
+    const ColorChannels& colorChannels) {
+    
+    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> replacementMap;
+
+    // Filtramos los colores candidatos para reemplazo (solo aquellos que no están en la lista de eliminados).
+    //la lista de candidatos es candidateColors
+    //colorsToRemoveSet tiene que ser la lista de n colores menos frecuentes
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> candidateColors;
+    for (size_t i = 0; i < colorChannels.size(); ++i) {
+        auto candidateColor = std::make_tuple(colorChannels.getRedChannel()[i], colorChannels.getGreenChannel()[i], colorChannels.getBlueChannel()[i]);
+        if (colorsToRemoveSet.find(candidateColor) == colorsToRemoveSet.end()) {
+            candidateColors.push_back(candidateColor); // Guardamos solo los colores que no han sido eliminados.
+        }
+    }
+
+    // Buscamos el color más cercano de los candidatos para cada color eliminado.
+    for (const auto& colorToRemove : colorsToRemoveSet) {
+        std::tuple<uint16_t, uint16_t, uint16_t> closestColor;
+        double minDistance = std::numeric_limits<double>::max(); // Inicializamos la distancia más corta como un valor muy alto.
+
+        // Recorremos los candidatos y calculamos la distancia euclidiana en el espacio RGB.
+        for (const auto& candidateColor : candidateColors) {
+            const int redDiff = static_cast<int>(std::get<0>(colorToRemove)) - static_cast<int>(std::get<0>(candidateColor));
+            const int greenDiff = static_cast<int>(std::get<1>(colorToRemove)) - static_cast<int>(std::get<1>(candidateColor));
+            const int blueDiff = static_cast<int>(std::get<2>(colorToRemove)) - static_cast<int>(std::get<2>(candidateColor));
+            const double distance = (redDiff * redDiff) + (greenDiff * greenDiff) + (blueDiff * blueDiff);
+
+            // Si encontramos una distancia menor, actualizamos el color más cercano.
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestColor = candidateColor;
+            }
+        }
+
+        // Guardamos en el mapa de reemplazo el color que debe sustituir al eliminado.
+        replacementMap[colorToRemove] = closestColor;
+    }
+
+    return replacementMap; // Devolvemos el mapa de reemplazo de colores.
+}
+
 // Implementación de processCutfreq
 void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
     std::cout << "Leyendo imagen y almacenando canales de color\n";
