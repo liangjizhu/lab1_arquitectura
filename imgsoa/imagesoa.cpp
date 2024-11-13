@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <numeric>
 #include <tuple>
+#include <stdexcept>
+#include <utility>
+
 
 // Constantes descriptivas
 constexpr uint16_t BYTE_MASK = 0xFF;
@@ -157,3 +160,105 @@ void compressSoA(const FilePaths& paths){
     BinaryIO::writeBinaryFile(outputFile, compressedData);
 }
 
+namespace imgsoa {
+
+  bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputFile, int newWidth, int newHeight) {
+    // Step 1: Read the image from the input file
+    PPMHeader header;
+    std::vector<uint8_t> data;
+    try {
+      data = readPPMData(inputFile, header);  // Ensure readPPMData is defined
+    } catch (const std::runtime_error& e) {
+      std::cerr << "Error: Failed to read image data - " << e.what() << '\n';
+      return false;
+    }
+
+    // Step 2: Convert data to SOA format
+    ImageSOA image;
+    image.width = header.width;
+    image.height = header.height;
+    image.redChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+    image.greenChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+    image.blueChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+
+    for (size_t i = 0, j = 0; i < data.size(); i += 3, ++j) {
+      image.redChannel[j] = data[i];
+      image.greenChannel[j] = data[i + 1];
+      image.blueChannel[j] = data[i + 2];
+    }
+
+    // Step 3: Resize the image
+    ImageSOA resizedImage = resizeImageSOA(image, newWidth, newHeight);
+
+    // Step 4: Convert resizedImage to a flat uint8_t vector
+    std::vector<uint8_t> resizedData(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight) * 3);
+    for (size_t j = 0, k = 0; j < resizedData.size(); j += 3, ++k) {
+      resizedData[j] = resizedImage.redChannel[k];
+      resizedData[j + 1] = resizedImage.greenChannel[k];
+      resizedData[j + 2] = resizedImage.blueChannel[k];
+    }
+
+    // Step 5: Write resized image to output file
+    try {
+      writePPM(outputFile, resizedData, newWidth, newHeight);  // Ensure writePPM is defined
+    } catch (const std::runtime_error& e) {
+      std::cerr << "Error: Failed to write resized image - " << e.what() << '\n';
+      return false;
+    }
+
+    return true;
+  }
+
+}  // namespace imgsoa
+
+ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
+    ImageSOA resizedImage;
+    resizedImage.width = newWidth;
+    resizedImage.height = newHeight;
+
+    // Resize channels with size_t cast
+    resizedImage.redChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+    resizedImage.greenChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+    resizedImage.blueChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+
+    // Calculate scaling ratios with float casts
+    float xRatio = static_cast<float>(image.width - 1) / static_cast<float>(newWidth - 1);
+    float yRatio = static_cast<float>(image.height - 1) / static_cast<float>(newHeight - 1);
+
+    for (int y = 0; y < newHeight; ++y) {
+        for (int x = 0; x < newWidth; ++x) {
+            float srcX = static_cast<float>(x) * xRatio;
+            float srcY = static_cast<float>(y) * yRatio;
+
+            size_t xL = std::min(static_cast<size_t>(srcX), static_cast<size_t>(image.width - 1));
+            size_t yL = std::min(static_cast<size_t>(srcY), static_cast<size_t>(image.height - 1));
+            size_t xH = std::clamp(xL + 1, size_t(0), static_cast<size_t>(image.width - 1));
+            size_t yH = std::clamp(yL + 1, size_t(0), static_cast<size_t>(image.height - 1));
+
+            float xWeight = srcX - static_cast<float>(xL);
+            float yWeight = srcY - static_cast<float>(yL);
+
+            auto interpolate = [&](const std::vector<uint8_t>& channel) {
+                float topLeft = static_cast<float>(channel[yL * static_cast<size_t>(image.width) + xL]);
+                float topRight = static_cast<float>(channel[yL * static_cast<size_t>(image.width) + xH]);
+                float bottomLeft = static_cast<float>(channel[yH * static_cast<size_t>(image.width) + xL]);
+                float bottomRight = static_cast<float>(channel[yH * static_cast<size_t>(image.width) + xH]);
+
+                return static_cast<uint8_t>(
+                    (topLeft * (1.0f - xWeight) * (1.0f - yWeight)) +
+                    (topRight * xWeight * (1.0f - yWeight)) +
+                    (bottomLeft * (1.0f - xWeight) * yWeight) +
+                    (bottomRight * xWeight * yWeight)
+                );
+            };
+
+            size_t index = static_cast<size_t>(y) * static_cast<size_t>(newWidth) + static_cast<size_t>(x);
+
+            resizedImage.redChannel[index] = interpolate(image.redChannel);
+            resizedImage.greenChannel[index] = interpolate(image.greenChannel);
+            resizedImage.blueChannel[index] = interpolate(image.blueChannel);
+        }
+    }
+
+    return resizedImage;
+}

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include "imageinfo.hpp"
 
 class BinaryIO {
     public:
@@ -19,5 +20,7 @@ class BinaryIO {
 std::vector<uint8_t> readPPM(const std::string& filename, int& width, int& height, int& maxColorValue);
 
 void writePPM(const std::string& filename, const std::vector<uint8_t>& pixelData, int width, int height);
+
+std::vector<uint8_t> readPPMData(const std::string& filename, PPMHeader& header);
 
 #endif // BINARYIO_HPP

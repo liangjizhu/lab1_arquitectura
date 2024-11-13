@@ -285,20 +285,26 @@ void compressAoS(const FilePaths& paths) {
 
 // RESIZE AOS
 Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int channels) {
-  if (data.size() != static_cast<size_t>(width * height * channels)) {
+  if (data.size() != static_cast<size_t>(width) * static_cast<size_t>(height) * static_cast<size_t>(channels)) {
     throw std::runtime_error("Data size does not match width, height, and channels.");
   }
 
   Image image(static_cast<size_t>(height), std::vector<Pixel>(static_cast<size_t>(width)));
   size_t index = 0;
 
-  for (size_t y = 0; y < static_cast<size_t>(height); ++y) {
-    for (size_t x = 0; x < static_cast<size_t>(width); ++x) {
-      Pixel pixel;
+  for (size_t y_pos= 0; y_pos< static_cast<size_t>(height); ++y_pos) {
+    for (size_t x_pos = 0; x_pos < static_cast<size_t>(width); ++x_pos) {
+      Pixel pixel = {
+        .r = data[index],
+        .g = (channels > 1) ? data[index + 1] : data[index],
+        .b = (channels > 2) ? data[index + 2] : data[index]
+    };
+      image[y_pos][x_pos] = pixel;
+
       pixel.r = data[index];
       pixel.g = (channels > 1) ? data[index + 1] : data[index];
       pixel.b = (channels > 2) ? data[index + 2] : data[index];
-      image[y][x] = pixel;
+      image[y_pos][x_pos] = pixel;
       index += static_cast<size_t>(channels);
     }
   }
@@ -313,74 +319,110 @@ std::vector<uint8_t> imageToVector(const Image& image, int channels) {
     for (const auto& row : image) {
         for (const auto& pixel : row) {
             data.push_back(pixel.r);
-            if (channels > 1) data.push_back(pixel.g);
-            if (channels > 2) data.push_back(pixel.b);
+            if (channels > 1) {data.push_back(pixel.g);}
+            if (channels > 2) {data.push_back(pixel.b);}
         }
     }
 
     return data;
 }
 
-Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
-    int originalWidth = static_cast<int>(image[0].size());
-    int originalHeight = static_cast<int>(image.size());
+namespace {
+  struct ScaleRatios {
+    float xRatio;
+    float yRatio;
+  };
 
-    // Crear la imagen escalada
+  std::pair<float, float> computeSourceCoordinates(int targetX, int targetY, const ScaleRatios& ratios) {
+    const float srcX = static_cast<float>(targetX) * ratios.xRatio;
+    const float srcY = static_cast<float>(targetY) * ratios.yRatio;
+    return {srcX, srcY};
+  }
+}
+
+
+namespace {
+  struct SourceCoordinates {
+    float srcX;
+    float srcY;
+    size_t lowerX;
+    size_t lowerY;
+  };
+
+  // Updated function to calculate weights with better precision
+  std::pair<float, float> calculateWeights(const SourceCoordinates& coords) {
+    const float xWeight = std::clamp(coords.srcX - static_cast<float>(coords.lowerX), 0.0f, 1.0f);
+    const float yWeight = std::clamp(coords.srcY - static_cast<float>(coords.lowerY), 0.0f, 1.0f);
+    return {xWeight, yWeight};
+  }
+}
+
+
+// Helper function to perform bilinear interpolation
+Pixel interpolatePixel(const Pixel& topLeft, const Pixel& topRight,
+                       const Pixel& bottomLeft, const Pixel& bottomRight,
+                       float xWeight, float yWeight) {
+  Pixel interpolatedPixel = {0, 0, 0};
+
+  interpolatedPixel.r = static_cast<uint8_t>(
+      (topLeft.r * (1.0f - xWeight) * (1.0f - yWeight)) +
+      (topRight.r * xWeight * (1.0f - yWeight)) +
+      (bottomLeft.r * (1.0f - xWeight) * yWeight) +
+      (bottomRight.r * xWeight * yWeight)
+  );
+  interpolatedPixel.g = static_cast<uint8_t>(
+      (topLeft.g * (1.0f - xWeight) * (1.0f - yWeight)) +
+      (topRight.g * xWeight * (1.0f - yWeight)) +
+      (bottomLeft.g * (1.0f - xWeight) * yWeight) +
+      (bottomRight.g * xWeight * yWeight)
+  );
+  interpolatedPixel.b = static_cast<uint8_t>(
+      (topLeft.b * (1.0f - xWeight) * (1.0f - yWeight)) +
+      (topRight.b * xWeight * (1.0f - yWeight)) +
+      (bottomLeft.b * (1.0f - xWeight) * yWeight) +
+      (bottomRight.b * xWeight * yWeight)
+  );
+  return interpolatedPixel;
+}
+
+
+
+Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
+    const size_t originalWidth = image[0].size();
+    const size_t originalHeight = image.size();
+
+    // Create the resized image
     Image resizedImage(static_cast<size_t>(newHeight), std::vector<Pixel>(static_cast<size_t>(newWidth)));
 
-    // Calcular las proporciones sin redondeo
-    float xRatio = static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1);
-    float yRatio = static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1);
+    ScaleRatios ratios = {static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1),
+                          static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1)};
 
-    for (int y = 0; y < newHeight; ++y) {
-        for (int x = 0; x < newWidth; ++x) {
-            // Convertir `x` y `y` a `float` explícitamente antes de multiplicarlos por `xRatio` y `yRatio`
-            float srcX = static_cast<float>(x) * xRatio;
-            float srcY = static_cast<float>(y) * yRatio;
+    for (size_t y = 0; y < static_cast<size_t>(newHeight); ++y) {
+        for (size_t x = 0; x < static_cast<size_t>(newWidth); ++x) {
+            auto [srcX, srcY] = computeSourceCoordinates(static_cast<int>(x), static_cast<int>(y), ratios);
 
-            // Índices enteros de los píxeles cercanos
-            int xL = static_cast<int>(srcX);
-            int yL = static_cast<int>(srcY);
-            int xH = std::min(xL + 1, originalWidth - 1);
-            int yH = std::min(yL + 1, originalHeight - 1);
+            // Integer indices of the neighboring pixels, cast to size_t
+            const size_t xL = std::min(static_cast<size_t>(srcX), originalWidth - 1);
+            const size_t yL = std::min(static_cast<size_t>(srcY), originalHeight - 1);
+            const size_t xH = std::clamp(xL + 1, size_t(0), originalWidth - 1);
+            const size_t yH = std::clamp(yL + 1, size_t(0), originalHeight - 1);
 
-            // Cálculo de pesos para la interpolación
-            float xWeight = srcX - static_cast<float>(xL);
-            float yWeight = srcY - static_cast<float>(yL);
+            // Create a SourceCoordinates instance
+            SourceCoordinates coords = {srcX, srcY, xL, yL};
 
-            // Píxeles cercanos para interpolación
-            Pixel topLeft = image[static_cast<size_t>(yL)][static_cast<size_t>(xL)];
-            Pixel topRight = image[static_cast<size_t>(yL)][static_cast<size_t>(xH)];
-            Pixel bottomLeft = image[static_cast<size_t>(yH)][static_cast<size_t>(xL)];
-            Pixel bottomRight = image[static_cast<size_t>(yH)][static_cast<size_t>(xH)];
+            // Calculate interpolation weights
+            auto [xWeight, yWeight] = calculateWeights(coords);
 
-            // Interpolación bilineal
-            Pixel interpolatedPixel;
-            interpolatedPixel.r = static_cast<uint8_t>(
-                topLeft.r * (1 - xWeight) * (1 - yWeight) +
-                topRight.r * xWeight * (1 - yWeight) +
-                bottomLeft.r * (1 - xWeight) * yWeight +
-                bottomRight.r * xWeight * yWeight
-            );
-            interpolatedPixel.g = static_cast<uint8_t>(
-                topLeft.g * (1 - xWeight) * (1 - yWeight) +
-                topRight.g * xWeight * (1 - yWeight) +
-                bottomLeft.g * (1 - xWeight) * yWeight +
-                bottomRight.g * xWeight * yWeight
-            );
-            interpolatedPixel.b = static_cast<uint8_t>(
-                topLeft.b * (1 - xWeight) * (1 - yWeight) +
-                topRight.b * xWeight * (1 - yWeight) +
-                bottomLeft.b * (1 - xWeight) * yWeight +
-                bottomRight.b * xWeight * yWeight
-            );
+            // Get the four neighboring pixels
+            const Pixel& topLeft = image[yL][xL];
+            const Pixel& topRight = image[yL][xH];
+            const Pixel& bottomLeft = image[yH][xL];
+            const Pixel& bottomRight = image[yH][xH];
 
-            // Asignar el píxel interpolado a la imagen escalada
-            resizedImage[static_cast<size_t>(y)][static_cast<size_t>(x)] = interpolatedPixel;
+            // Interpolate the pixel
+            resizedImage[y][x] = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, xWeight, yWeight);
         }
     }
 
     return resizedImage;
 }
-
-

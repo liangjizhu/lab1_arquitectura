@@ -26,12 +26,25 @@ int handleMaxLevel(const ProgramArgs& args) {
 
 // Función para manejar el comando 'resize'
 int handleResize(const ProgramArgs& args) {
-    if (!args.validateResize()) {
-        std::cerr << args.getErrorMessage() << '\n';
-        return -1;
-    }
-    return 0;
+  if (!args.validateResize()) {
+    std::cerr << args.getErrorMessage() << '\n';
+    return -1;
+  }
+
+  const int width = args.getResizeWidth();
+  const int height = args.getResizeHeight();
+  std::cout << "Resizing to " << width << "x" << height << '\n';
+
+  // Delegate the resizing to a separate function in imagesoa.cpp
+  if (!imgsoa::resizeAndSaveImage(args.getInputFile(), args.getOutputFile(), width, height)) {
+    std::cerr << "Error: Resizing failed.\n";
+    return -1;
+  }
+
+  std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+  return 0;
 }
+
 
 // Función para manejar el comando 'cutfreq'
 int handleCutFreq(const ProgramArgs& args) {
