@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-// El MAIN solo invoca funciones
 int main(int argc, char* argv[]) {
     std::vector<std::string> const arguments(argv, argv + argc);
     ProgramArgs const args(arguments);
@@ -32,11 +31,11 @@ int main(int argc, char* argv[]) {
         if (command == "compress") {
             return handleCompress(args);
         }
-        // Manejo de comando desconocido
+
         std::cerr << "Error: Unknown command '" << command << "'" << '\n';
         return 1;
-        } catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << '\n';
-            return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << '\n';
+        return 1;
     }
 }

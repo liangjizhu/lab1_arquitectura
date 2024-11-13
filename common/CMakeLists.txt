@@ -2,9 +2,12 @@
 add_library(common
     progargs.cpp
     binaryio.cpp
-    imageinfo.hpp
     imageinfo.cpp
+    imageinfo.hpp
 )
+
+# Incluir los directorios necesarios para encontrar archivos de encabezado
+target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Use this line only if you have dependencies from this library to GSL
 target_link_libraries(common PRIVATE Microsoft.GSL::GSL)

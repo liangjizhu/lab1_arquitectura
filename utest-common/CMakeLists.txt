@@ -1,17 +1,25 @@
 # Executable for all unit tests with list of sources
-# For example, you may have one *_test.cpp for each *.cpp in common
+# Crear el ejecutable para los tests unitarios
 add_executable(utest-common
-        progargs_test.cpp
-        binaryio_test.cpp
-        imageinfo_test.cpp
+    progargs_test.cpp
+    binaryio_test.cpp
+    imageinfo_test.cpp
 )
 
-# Library dependencies
+# Incluir directorios necesarios
+target_include_directories(utest-common
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ../common
+)
+
+# Enlazar con las bibliotecas necesarias
 target_link_libraries(utest-common
-        PRIVATE
+    PRIVATE
         common
         GTest::gtest_main
         Microsoft.GSL::GSL
 )
 
-add_test(NAME utest_common COMMAND ${CMAKE_BINARY_DIR}/utest-common/utest-common)
+# Registrar el test
+add_test(NAME utest-common COMMAND utest-common)

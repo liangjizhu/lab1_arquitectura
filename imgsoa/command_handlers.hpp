@@ -3,7 +3,7 @@
 
 #include "progargs.hpp"
 
-// Declaraciones de funciones para manejar cada comando
+// Declaraciones de las funciones
 int handleInfo(const ProgramArgs& args);
 int handleMaxLevel(const ProgramArgs& args);
 int handleResize(const ProgramArgs& args);
