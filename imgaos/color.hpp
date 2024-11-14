@@ -20,7 +20,7 @@ class Color {
 
     // Constructor para inicializar colores
     explicit Color(RGBColor color) noexcept;
-
+    Color() = default; // Constructor predeterminado
     // Cargar color desde datos binarios según maxColorValue en header
     [[nodiscard]] static Color fromBinary(const uint8_t* data, const PPMHeader& header) noexcept;
 
@@ -32,9 +32,23 @@ class Color {
 };
 
 // Especialización de std::hash para la clase Color
+struct HashColor {
+    size_t operator()(const Color& color) const {
+        // Combinamos los valores de los componentes RGB en un solo hash
+        size_t h1 = std::hash<uint16_t>{}(color.rgb.red);
+        size_t h2 = std::hash<uint16_t>{}(color.rgb.green);
+        size_t h3 = std::hash<uint16_t>{}(color.rgb.blue);
+        
+        // Usamos un patrón común de combinar hashes
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
+    }
+};
+
+// Especialización de std::hash para la clase Color
 template <>
 struct std::hash<Color> {
     size_t operator()(const Color& color) const noexcept;
 };
+
 
 #endif // COLOR_HPP
