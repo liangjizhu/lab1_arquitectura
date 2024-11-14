@@ -1,14 +1,10 @@
-//
-// Created by liang on 4/10/24.
-//
-
 #ifndef BINARYIO_HPP
 #define BINARYIO_HPP
 
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <iostream>
+#include "imageinfo.hpp"
 
 class BinaryIO {
     public:
@@ -22,6 +18,14 @@ class BinaryIO {
 
     // Escribe el contenido en un archivo binario desde un vector de bytes
     static void writeBinaryFile(const std::string& filename, const std::vector<uint8_t>& data);
+
 };
+
+// Lee un archivo PPM y devuelve los datos de píxeles junto con el ancho, alto y el valor máximo de color
+std::vector<uint8_t> readPPM(const std::string& filename, int& width, int& height, int& maxColorValue);
+
+void writePPM(const std::string& filename, const std::vector<uint8_t>& pixelData, int width, int height);
+
+std::vector<uint8_t> readPPMData(const std::string& filename, PPMHeader& header);
 
 #endif // BINARYIO_HPP

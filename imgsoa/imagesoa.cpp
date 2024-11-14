@@ -1,17 +1,629 @@
-//
-// Created by liang on 4/10/24.
-//
 #include "imagesoa.hpp"
+#include "binaryio.hpp"
+#include "imageinfo.hpp"
 #include "color.hpp"
+#include "progargs.hpp"
 
+#include <vector>
+#include <unordered_map>
 #include <iostream>
 #include <fstream>
-#include <cmath>
-#include <limits>
 #include <string>
+#include <algorithm>
+#include <numeric>
+#include "imagesoa.hpp"
+#include "binaryio.hpp"
+#include "imageinfo.hpp"
+#include "color.hpp"
+#include "progargs.hpp"
 
-void processMaxLevel(const std::string& inputFile, int maxLevel) {
-    // Lógica para el comando 'maxlevel'
-    std::cout << "Processing 'maxlevel' for file: " << inputFile << " with max level: " << maxLevel << std::endl;
-    // Aquí iría la lógica para modificar el nivel máximo del archivo
+#include <vector>
+#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <numeric>
+#include <tuple>
+#include "imagesoa.hpp"
+#include "binaryio.hpp"
+#include "imageinfo.hpp"
+#include "color.hpp"
+#include "progargs.hpp"
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <numeric>
+#include <tuple>
+#include <limits>
+#include <cmath>
+#include <memory>
+
+// Constantes descriptivas
+constexpr uint16_t BYTE_MASK = 0xFF;
+constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
+constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
+constexpr uint8_t BITS_PER_BYTE = 8;
+constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
+
+// Crear índice de colores
+std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable) {
+    std::unordered_map<std::string, int> colorIndex;
+    colorIndex.reserve(COLOR_TABLE_RESERVE_SIZE);
+
+    size_t tableIndex = 0;
+
+    for (size_t i = 0; i < channels.size(); ++i) {
+        std::string const colorKey = std::to_string(channels.getRedChannel()[i]) + "," +
+                                     std::to_string(channels.getGreenChannel()[i]) + "," +
+                                     std::to_string(channels.getBlueChannel()[i]);
+
+        auto [it, inserted] = colorIndex.emplace(colorKey, static_cast<int>(tableIndex));
+        if (inserted) {
+            colorTable.getRedChannel().push_back(channels.getRedChannel()[i]);
+            colorTable.getGreenChannel().push_back(channels.getGreenChannel()[i]);
+            colorTable.getBlueChannel().push_back(channels.getBlueChannel()[i]);
+            tableIndex++;
+        }
+    }
+
+    return colorIndex;
+}
+
+// Ordenar la tabla de colores en orden lexicográfico RGB
+std::vector<size_t> sortColorTable(ColorChannels& colorTable) {
+    std::vector<size_t> indices(colorTable.getRedChannel().size());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::ranges::sort(indices.begin(), indices.end(), [&colorTable](size_t indexA, size_t indexB) {
+        return std::tie(colorTable.getRedChannel()[indexA], colorTable.getGreenChannel()[indexA], colorTable.getBlueChannel()[indexA]) <
+               std::tie(colorTable.getRedChannel()[indexB], colorTable.getGreenChannel()[indexB], colorTable.getBlueChannel()[indexB]);
+    });
+
+    return indices;
+}
+
+// Crear tabla de colores ordenada
+ColorChannels createSortedColorTable(const ColorChannels& colorTable, const std::vector<size_t>& indices) {
+    ColorChannels sortedColorTable(colorTable.size());
+
+    for (unsigned long const index : indices) {
+        sortedColorTable.getRedChannel().push_back(colorTable.getRedChannel()[index]);
+        sortedColorTable.getGreenChannel().push_back(colorTable.getGreenChannel()[index]);
+        sortedColorTable.getBlueChannel().push_back(colorTable.getBlueChannel()[index]);
+    }
+
+    return sortedColorTable;
+}
+
+// Reconstruir el índice de colores para la tabla ordenada
+std::unordered_map<std::string, int> rebuildColorIndex(const ColorChannels& sortedColorTable) {
+    std::unordered_map<std::string, int> colorIndex;
+    colorIndex.reserve(COLOR_TABLE_RESERVE_SIZE);
+
+    for (size_t i = 0; i < sortedColorTable.size(); ++i) {
+        std::string const colorKey = std::to_string(sortedColorTable.getRedChannel()[i]) + "," +
+                               std::to_string(sortedColorTable.getGreenChannel()[i]) + "," +
+                               std::to_string(sortedColorTable.getBlueChannel()[i]);
+        colorIndex[colorKey] = static_cast<int>(i);
+    }
+
+    return colorIndex;
+}
+
+// Crear tabla de colores y mapa de índices (SoA)
+std::tuple<ColorChannels, std::unordered_map<std::string, int>>
+createColorTableSoA(const ColorChannels& channels) {
+    ColorChannels colorTable(channels.size());
+    auto colorIndex = buildColorIndex(channels, colorTable);
+
+    // Ordenar la tabla de colores
+    auto indices = sortColorTable(colorTable);
+    auto sortedColorTable = createSortedColorTable(colorTable, indices);
+
+    // Reconstruir el índice de colores
+    auto sortedColorIndex = rebuildColorIndex(sortedColorTable);
+
+    return {sortedColorTable, sortedColorIndex};
+}
+
+// Añadir tabla de colores al archivo comprimido
+void appendColorTableSoA(std::vector<uint8_t>& compressedData, const ColorChannels& colorTable, const PPMHeader& header) {
+    colorTable.writeToBinary(compressedData, header);
+}
+
+
+// Añadir índices de píxeles al archivo comprimido
+void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
+                           const ColorChannels& channels,
+                           const std::unordered_map<std::string, int>& colorIndex) {
+    for (size_t i = 0; i < channels.size(); ++i) {
+        std::string const colorKey = std::to_string(channels.getRedChannel()[i]) + "," +
+                                     std::to_string(channels.getGreenChannel()[i]) + "," +
+                                     std::to_string(channels.getBlueChannel()[i]);
+
+        int const index = colorIndex.at(colorKey);
+        compressedData.push_back(static_cast<uint8_t>(index & BYTE_MASK));
+        compressedData.push_back(static_cast<uint8_t>(index >> BITS_PER_BYTE));
+    }
+}
+
+
+// Función principal de compresión SoA
+void compressSoA(const FilePaths& paths){
+    std::string const outputFile = ensureCppmExtension(paths.outputFile);
+
+    const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
+    if (fileData.empty()) {
+      std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << paths.inputFile << '\n';
+      return;
+    }
+
+    PPMHeader header{};
+    if (!readPPMHeader(paths.inputFile, header)) {
+      std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
+      return;
+    }
+
+    // Crear objeto ColorChannels para manejar los canales
+    ColorChannels channels(static_cast<size_t>(header.width) * static_cast<size_t>(header.height));
+    channels.extractFromBinary(fileData, header);
+
+    // Crear la tabla de colores y el índice
+    auto [colorTable, colorIndex] = createColorTableSoA(channels);
+    std::string headerStr = generateHeader(header, static_cast<int>(colorTable.size()));
+
+    // Crear datos comprimidos
+    std::vector<uint8_t> compressedData;
+    compressedData.insert(compressedData.end(), headerStr.begin(), headerStr.end());
+    appendColorTableSoA(compressedData, colorTable, header);
+    appendPixelIndicesSoA(compressedData, channels, colorIndex);
+
+    // Escribir el archivo comprimido
+    BinaryIO::writeBinaryFile(outputFile, compressedData);
+}
+
+namespace imgsoa {
+
+  bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputFile, int newWidth, int newHeight) {
+    // Step 1: Read the image from the input file
+    PPMHeader header;
+    std::vector<uint8_t> data;
+    try {
+      data = readPPMData(inputFile, header);  // Ensure readPPMData is defined
+    } catch (const std::runtime_error& e) {
+      std::cerr << "Error: Failed to read image data - " << e.what() << '\n';
+      return false;
+    }
+
+    // Step 2: Convert data to SOA format
+    ImageSOA image;
+    image.width = header.width;
+    image.height = header.height;
+    image.redChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+    image.greenChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+    image.blueChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+
+    for (size_t i = 0, j = 0; i < data.size(); i += 3, ++j) {
+      image.redChannel[j] = data[i];
+      image.greenChannel[j] = data[i + 1];
+      image.blueChannel[j] = data[i + 2];
+    }
+
+    // Step 3: Resize the image
+    ImageSOA resizedImage = resizeImageSOA(image, newWidth, newHeight);
+
+    // Step 4: Convert resizedImage to a flat uint8_t vector
+    std::vector<uint8_t> resizedData(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight) * 3);
+    for (size_t j = 0, k = 0; j < resizedData.size(); j += 3, ++k) {
+      resizedData[j] = resizedImage.redChannel[k];
+      resizedData[j + 1] = resizedImage.greenChannel[k];
+      resizedData[j + 2] = resizedImage.blueChannel[k];
+    }
+
+    // Step 5: Write resized image to output file
+    try {
+      writePPM(outputFile, resizedData, newWidth, newHeight);  // Ensure writePPM is defined
+    } catch (const std::runtime_error& e) {
+      std::cerr << "Error: Failed to write resized image - " << e.what() << '\n';
+      return false;
+    }
+
+    return true;
+  }
+
+}  // namespace imgsoa
+
+ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
+    ImageSOA resizedImage;
+    resizedImage.width = newWidth;
+    resizedImage.height = newHeight;
+
+    // Resize channels with size_t cast
+    resizedImage.redChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+    resizedImage.greenChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+    resizedImage.blueChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+
+    // Calculate scaling ratios with float casts
+    float xRatio = static_cast<float>(image.width - 1) / static_cast<float>(newWidth - 1);
+    float yRatio = static_cast<float>(image.height - 1) / static_cast<float>(newHeight - 1);
+
+    for (int y = 0; y < newHeight; ++y) {
+        for (int x = 0; x < newWidth; ++x) {
+            float srcX = static_cast<float>(x) * xRatio;
+            float srcY = static_cast<float>(y) * yRatio;
+
+            size_t xL = std::min(static_cast<size_t>(srcX), static_cast<size_t>(image.width - 1));
+            size_t yL = std::min(static_cast<size_t>(srcY), static_cast<size_t>(image.height - 1));
+            size_t xH = std::clamp(xL + 1, size_t(0), static_cast<size_t>(image.width - 1));
+            size_t yH = std::clamp(yL + 1, size_t(0), static_cast<size_t>(image.height - 1));
+
+            float xWeight = srcX - static_cast<float>(xL);
+            float yWeight = srcY - static_cast<float>(yL);
+
+            auto interpolate = [&](const std::vector<uint8_t>& channel) {
+                float topLeft = static_cast<float>(channel[yL * static_cast<size_t>(image.width) + xL]);
+                float topRight = static_cast<float>(channel[yL * static_cast<size_t>(image.width) + xH]);
+                float bottomLeft = static_cast<float>(channel[yH * static_cast<size_t>(image.width) + xL]);
+                float bottomRight = static_cast<float>(channel[yH * static_cast<size_t>(image.width) + xH]);
+
+                return static_cast<uint8_t>(
+                    (topLeft * (1.0f - xWeight) * (1.0f - yWeight)) +
+                    (topRight * xWeight * (1.0f - yWeight)) +
+                    (bottomLeft * (1.0f - xWeight) * yWeight) +
+                    (bottomRight * xWeight * yWeight)
+                );
+            };
+
+            size_t index = static_cast<size_t>(y) * static_cast<size_t>(newWidth) + static_cast<size_t>(x);
+
+            resizedImage.redChannel[index] = interpolate(image.redChannel);
+            resizedImage.greenChannel[index] = interpolate(image.greenChannel);
+            resizedImage.blueChannel[index] = interpolate(image.blueChannel);
+        }
+    }
+
+    return resizedImage;
+}
+
+//************PRUEBAS CON ÁBOLES*************/
+
+void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency) {
+    PPMHeader header{};
+    if (!readPPMHeader(inputFile, header)) {
+      std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
+      return;
+    }
+    // Abrir el archivo en modo binario
+    std::ifstream file(inputFile, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo de entrada: " << inputFile << '\n';
+        return;
+    }
+    // Leer el encabezado del archivo PPM
+    std::string format;
+    file >> format >> header.width >> header.height >> header.maxColorValue;
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignorar el salto de línea después del encabezado
+    // Verificar formato y valor máximo de color
+    if (format != "P6" || header.maxColorValue != MAX_COLOR_VALUE_8BIT) {
+        std::cerr << "Error: Formato PPM no soportado o valor máximo de color inválido en " << inputFile << '\n';
+        return;
+    }
+    // Calcular el número total de píxeles
+    const size_t totalPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
+    // Reservar espacio en los canales de color
+    colorChannels.reserve(totalPixels);
+    // Leer todos los datos de píxeles en un solo bloque
+    std::vector<char> buffer(totalPixels * 3); // Cada píxel tiene 3 componentes (RGB)
+    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    // Extraer los datos a los canales y calcular frecuencias
+    const std::vector<uint8_t> uint8Buffer(buffer.begin(), buffer.end());
+    colorChannels.extractFromBinaryWithFrequency(uint8Buffer, header, colorFrequency);
+    file.close();
+}
+
+std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrar_colores_menos_frecuentes_2(
+    const std::unordered_map<uint32_t, int, HashColor>& frecuencia, int n) {
+
+    // Vector para almacenar colores con sus frecuencias y ordenar
+    std::vector<std::pair<std::tuple<uint16_t, uint16_t, uint16_t>, int>> colores_frecuentes;
+    // Convertimos cada color en una tupla RGB y lo almacenamos junto con su frecuencia
+    for (const auto& [color, freq] : frecuencia) {
+        const uint16_t red = (color >> 16) & 0xFF;
+        const uint16_t green = (color >> 8) & 0xFF;
+        const uint16_t blue = color & 0xFF;
+        colores_frecuentes.emplace_back(std::make_tuple(red, green, blue), freq);
+    }
+
+    // Ordenar el vector por frecuencia en orden ascendente
+    std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), [](const auto& colora, const auto& colorb) {
+        return colora.second < colorb.second;
+    });
+
+    // Crear un conjunto para los colores menos frecuentes
+    std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> colores_menos_frecuentes;
+
+    // Agregar los primeros n colores menos frecuentes al conjunto
+    for (size_t i = 0; i < std::min(static_cast<size_t>(n), colores_frecuentes.size()); ++i) {
+        colores_menos_frecuentes.insert(colores_frecuentes[i].first);
+    }
+
+    return colores_menos_frecuentes;
+}
+
+constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
+constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
+constexpr int MASK = 0xFF;
+
+void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& replacementMap) {
+    // Crear un mapa de búsqueda más eficiente usando un único entero como clave
+    std::unordered_map<uint32_t, uint32_t> fastReplacementMap;
+    fastReplacementMap.reserve(replacementMap.size());  // Pre-reservar espacio
+    // Convertir el mapa de tuplas a un mapa de enteros
+    for (const auto& [oldColor, newColor] : replacementMap) {
+        const uint32_t oldPacked = (static_cast<uint32_t>(std::get<0>(oldColor)) << SHIFT_RED) |
+                            (static_cast<uint32_t>(std::get<1>(oldColor)) << SHIFT_GREEN) |
+                            (static_cast<uint32_t>(std::get<2>(oldColor)));
+
+        const uint32_t newPacked = (static_cast<uint32_t>(std::get<0>(newColor)) << SHIFT_RED) |
+                            (static_cast<uint32_t>(std::get<1>(newColor)) << SHIFT_GREEN) |
+                            (static_cast<uint32_t>(std::get<2>(newColor)));
+
+        fastReplacementMap[oldPacked] = newPacked;
+    }
+    // Obtener referencias directas a los canales para evitar llamadas a métodos
+    auto& reds = colorChannels.getRedChannel();
+    auto& greens = colorChannels.getGreenChannel();
+    auto& blues = colorChannels.getBlueChannel();
+    // Procesar los píxeles en bloques para mejor uso de la caché
+    constexpr size_t BLOCK_SIZE = 1024;
+    const size_t totalPixels = colorChannels.size();
+    for (size_t blockStart = 0; blockStart < totalPixels; blockStart += BLOCK_SIZE) {
+        const size_t blockEnd = std::min(blockStart + BLOCK_SIZE, totalPixels);
+        for (size_t i = blockStart; i < blockEnd; ++i) {
+            // Empaquetar el color actual en un único entero
+            const uint32_t currentPacked = (static_cast<uint32_t>(reds[i]) << SHIFT_RED) |
+                                   (static_cast<uint32_t>(greens[i]) << SHIFT_GREEN) |
+                                   (static_cast<uint32_t>(blues[i]));
+            // Buscar si hay que reemplazar el color
+            auto its = fastReplacementMap.find(currentPacked);
+            if (its != fastReplacementMap.end()) {
+                // Desempaquetar el nuevo color directamente a los canales
+                reds[i] = (its->second >> SHIFT_RED) & MASK;
+                greens[i] = (its->second >> SHIFT_GREEN) & MASK;
+                blues[i] = its->second & MASK;
+            }
+        }
+    }
+}
+
+struct KDNode {
+    std::tuple<uint16_t, uint16_t, uint16_t> color;
+    std::unique_ptr<KDNode> left = nullptr;
+    std::unique_ptr<KDNode> right = nullptr;
+
+    KDNode(const std::tuple<uint16_t, uint16_t, uint16_t>& color)
+        : color(color) {}
+};
+
+// Construcción balanceada del árbol KD
+std::unique_ptr<KDNode> construirKDTree(std::vector<std::tuple<uint16_t, uint16_t, uint16_t>>& colors, int depth = 0) {
+    if (colors.empty()) {
+        return nullptr;
+    }
+    const int axis = depth % 3;
+    std::sort(colors.begin(), colors.end(), [axis](const auto& sidea, const auto& sideb) {
+        if (axis == 0) {
+            return std::get<0>(sidea) < std::get<0>(sideb);
+        }
+        if (axis == 1) {
+            return std::get<1>(sidea) < std::get<1>(sideb);
+        }
+        return std::get<2>(sidea) < std::get<2>(sideb);
+        if (axis == 1){
+            return std::get<1>(sidea) < std::get<1>(sideb);
+        }
+        return std::get<2>(sidea) < std::get<2>(sideb);
+    });
+
+    const size_t medianIndex = colors.size() / 2;
+    //auto* root = new KDNode(colors[medianIndex]);
+    std::unique_ptr<KDNode> root = std::make_unique<KDNode>(colors[medianIndex]);
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> leftColors(colors.begin(), colors.begin() + static_cast<std::vector<std::tuple<uint16_t, uint16_t, uint16_t>>::difference_type>(medianIndex));
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> rightColors(colors.begin() + static_cast<std::vector<std::tuple<uint16_t, uint16_t, uint16_t>>::difference_type>(medianIndex) + 1, colors.end());
+
+    root->left = construirKDTree(leftColors, depth + 1);
+    root->right = construirKDTree(rightColors, depth + 1);
+
+    return root;
+}
+
+// Calcular la distancia al cuadrado entre dos colores
+double calcularDistanciaCuadrada(const std::tuple<uint16_t, uint16_t, uint16_t>& color1,
+                                 const std::tuple<uint16_t, uint16_t, uint16_t>& color2) {
+    return std::pow(std::get<0>(color1) - std::get<0>(color2), 2) +
+           std::pow(std::get<1>(color1) - std::get<1>(color2), 2) +
+           std::pow(std::get<2>(color1) - std::get<2>(color2), 2);
+}
+
+
+struct BusquedaVecino {
+    std::tuple<uint16_t, uint16_t, uint16_t> color;  // El color que estamos buscando
+    double minDistanciaCuadrada;                     // La distancia mínima encontrada hasta ahora
+    std::tuple<uint16_t, uint16_t, uint16_t> mejorColor;  // El mejor color encontrado hasta ahora
+
+    BusquedaVecino(const std::tuple<uint16_t, uint16_t, uint16_t>& col)
+        : color(col), minDistanciaCuadrada(std::numeric_limits<double>::infinity()) {}
+};
+
+void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, int depth = 0) {
+    if (root == nullptr){
+        return;
+    }
+    // Calculamos la distancia al cuadrado entre el color buscado y el color del nodo actual
+    const double distancia = calcularDistanciaCuadrada(busqueda.color, root->color);
+    // Si encontramos un color más cercano, lo actualizamos
+    if (distancia < busqueda.minDistanciaCuadrada) {
+        busqueda.minDistanciaCuadrada = distancia;
+        busqueda.mejorColor = root->color;
+    }
+    const int axis = depth % 3;
+    KDNode* primerSubArbol = nullptr;
+    KDNode* segundoSubArbol = nullptr;
+    // Decidimos qué subárbol explorar primero
+    if ((axis == 0 && std::get<0>(busqueda.color) < std::get<0>(root->color)) ||
+        (axis == 1 && std::get<1>(busqueda.color) < std::get<1>(root->color)) ||
+        (axis == 2 && std::get<2>(busqueda.color) < std::get<2>(root->color))) {
+            primerSubArbol = root->left.get();
+            segundoSubArbol = root->right.get();
+        } else {
+            primerSubArbol = root->right.get();
+            segundoSubArbol = root->left.get();
+    }
+    // Recursión en el primer subárbol
+    buscarVecinoMasCercanoOptimizado(primerSubArbol, busqueda, depth + 1);
+    // Calculamos la distancia al eje para ver si necesitamos explorar el otro subárbol
+    double distanciaAlEje = 0.0;
+    if (axis == 0) {
+        distanciaAlEje = std::pow(std::get<0>(busqueda.color) - std::get<0>(root->color), 2);
+    } else if (axis == 1) {
+        distanciaAlEje = std::pow(std::get<1>(busqueda.color) - std::get<1>(root->color), 2);
+    } else {
+        distanciaAlEje = std::pow(std::get<2>(busqueda.color) - std::get<2>(root->color), 2);
+    }
+    // Si la distancia al eje es menor que la mínima encontrada, exploramos el otro subárbol
+    if (distanciaAlEje < busqueda.minDistanciaCuadrada) {
+        buscarVecinoMasCercanoOptimizado(segundoSubArbol, busqueda, depth + 1);
+    }
+}
+
+void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
+    std::ofstream outFile(outputFile, std::ios::binary);
+    if (!outFile.is_open()) {
+        std::cerr << "Error al abrir el archivo de salida: " << outputFile << '\n';
+        return;
+    }
+    // Configurar buffer de salida para mejor rendimiento
+    constexpr size_t BUFFER_SIZE = static_cast<size_t>(1024) * 1024; // 1MB buffer
+    std::vector<char> writeBuffer(BUFFER_SIZE);
+    outFile.rdbuf()->pubsetbuf(writeBuffer.data(), BUFFER_SIZE);
+    // Pre-calcular el tamaño del encabezado y reservar espacio
+    const std::string headerStr = "P6\n" + std::to_string(header.width) + " " +
+                           std::to_string(header.height) + "\n255\n";
+    // Escribir encabezado con conversión segura de tipo
+    outFile.write(headerStr.c_str(), static_cast<std::streamsize>(headerStr.size()));
+    // Obtener referencias directas a los canales
+    const auto& reds = colorChannels.getRedChannel();
+    const auto& greens = colorChannels.getGreenChannel();
+    const auto& blues = colorChannels.getBlueChannel();
+    // Calcular el tamaño total de los datos de píxeles
+    const size_t totalPixels = colorChannels.size();
+    const size_t bufferSize = totalPixels * 3; // 3 bytes por píxel (RGB)
+    // Crear un buffer temporal para los datos de píxeles
+    std::vector<uint8_t> pixelBuffer(bufferSize);
+    // Llenar el buffer con los datos RGB de manera eficiente
+    for (size_t i = 0, j = 0; i < totalPixels; ++i) {
+        pixelBuffer[j++] = static_cast<uint8_t>(reds[i]);
+        pixelBuffer[j++] = static_cast<uint8_t>(greens[i]);
+        pixelBuffer[j++] = static_cast<uint8_t>(blues[i]);
+    }
+    // Escribir todos los datos de píxeles de una sola vez con conversión segura de tipo
+    //NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+    outFile.write(reinterpret_cast<const char*>(pixelBuffer.data()),
+              static_cast<std::streamsize>(bufferSize));
+    //NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
+    // Forzar la escritura de cualquier dato en el buffer
+    outFile.flush();
+    std::cout << "Imagen procesada escrita en: " << outputFile << '\n';
+}
+
+// Definir constantes para los desplazamientos y la máscara
+/*constexpr int SHIFT_RED = 16;
+constexpr int SHIFT_GREEN = 8;
+constexpr int MASK = 0xFF;*/
+
+
+std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrarColoresReemplazo(
+    const std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& colorsToRemoveSet,
+    const ColorChannels& colorChannels) {
+
+    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> replacementMap;
+
+    // Filtramos los colores candidatos para reemplazo (solo aquellos que no están en la lista de eliminados).
+    //la lista de candidatos es candidateColors
+    //colorsToRemoveSet tiene que ser la lista de n colores menos frecuentes
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> candidateColors;
+    for (size_t i = 0; i < colorChannels.size(); ++i) {
+        auto candidateColor = std::make_tuple(colorChannels.getRedChannel()[i], colorChannels.getGreenChannel()[i], colorChannels.getBlueChannel()[i]);
+        if (colorsToRemoveSet.find(candidateColor) == colorsToRemoveSet.end()) {
+            candidateColors.push_back(candidateColor); // Guardamos solo los colores que no han sido eliminados.
+        }
+    }
+
+    // Buscamos el color más cercano de los candidatos para cada color eliminado.
+    for (const auto& colorToRemove : colorsToRemoveSet) {
+        std::tuple<uint16_t, uint16_t, uint16_t> closestColor;
+        double minDistance = std::numeric_limits<double>::max(); // Inicializamos la distancia más corta como un valor muy alto.
+
+        // Recorremos los candidatos y calculamos la distancia euclidiana en el espacio RGB.
+        for (const auto& candidateColor : candidateColors) {
+            const int redDiff = static_cast<int>(std::get<0>(colorToRemove)) - static_cast<int>(std::get<0>(candidateColor));
+            const int greenDiff = static_cast<int>(std::get<1>(colorToRemove)) - static_cast<int>(std::get<1>(candidateColor));
+            const int blueDiff = static_cast<int>(std::get<2>(colorToRemove)) - static_cast<int>(std::get<2>(candidateColor));
+            const double distance = (redDiff * redDiff) + (greenDiff * greenDiff) + (blueDiff * blueDiff);
+
+            // Si encontramos una distancia menor, actualizamos el color más cercano.
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestColor = candidateColor;
+            }
+        }
+
+        // Guardamos en el mapa de reemplazo el color que debe sustituir al eliminado.
+        replacementMap[colorToRemove] = closestColor;
+    }
+
+    return replacementMap; // Devolvemos el mapa de reemplazo de colores.
+}
+
+
+
+void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
+    PPMHeader header{};
+    if (!readPPMHeader(inputFile, header)) {
+        std::cerr << "Error al leer el encabezado del archivo PPM.\n";
+        return;
+    }
+    const size_t totalPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
+    ColorChannels colorChannels(totalPixels);
+    std::unordered_map<uint32_t, int, HashColor> colorFrequency;
+    readImageAndStoreChannels(inputFile, colorChannels, colorFrequency);
+    auto coloresMenosFrecuentes = encontrar_colores_menos_frecuentes_2(colorFrequency, numColors);
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> coloresRestantes;
+    for (const auto& [color, _] : colorFrequency) {
+        const uint16_t red = (color >> 16) & 0xFF;
+        const uint16_t green = (color >> 8) & 0xFF;
+        const uint16_t blue = color & 0xFF;
+        auto colorTupla = std::make_tuple(red, green, blue);
+        if (coloresMenosFrecuentes.find(colorTupla) == coloresMenosFrecuentes.end()) {
+            coloresRestantes.push_back(colorTupla);
+        }
+    }
+    const std::unique_ptr<KDNode> kdTreeRoot = construirKDTree(coloresRestantes);
+    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> replacementMap;
+    // Modificamos la forma en que se pasan los parámetros a la búsqueda
+    for (const auto& colorMenosFrecuente : coloresMenosFrecuentes) {
+        // Creamos la estructura de búsqueda
+        BusquedaVecino busqueda{colorMenosFrecuente};
+        // Llamamos a la función con la estructura
+        buscarVecinoMasCercanoOptimizado(kdTreeRoot.get(), busqueda);
+        // Usamos el resultado almacenado en la estructura
+        replacementMap[colorMenosFrecuente] = busqueda.mejorColor;
+    }
+    sustituirColoresEnImagen(colorChannels, replacementMap);
+    writePPM(outputFile, header, colorChannels);
 }

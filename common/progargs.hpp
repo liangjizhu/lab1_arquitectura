@@ -1,41 +1,44 @@
-//
-// Created by liang on 4/10/24.
-//
-
 #ifndef PROGARGS_HPP
 #define PROGARGS_HPP
 
 #include <string>
 #include <vector>
+#include <optional>
+
+struct FilePaths {
+    std::string inputFile;
+    std::string outputFile;
+};
 
 class ProgramArgs {
     public:
-    ProgramArgs(int argc, char* argv[]);
+    ProgramArgs(const std::vector<std::string>& arguments);
 
-    bool validate();
-    std::string getInputFile() const;
-    std::string getOperation() const;
-    int getMaxLevel() const;
-    int getResizeWidth() const;
-    int getResizeHeight() const;
-    int getCutFreq() const;
+    bool validate() const;
+    [[nodiscard]] std::string getInputFile() const;
+    [[nodiscard]] std::string getOutputFile() const;
+    [[nodiscard]] std::string getOperation() const;
+    [[nodiscard]] int getMaxLevel() const;
+    [[nodiscard]] int getResizeWidth() const;
+    [[nodiscard]] int getResizeHeight() const;
+    [[nodiscard]] int getCutFreq() const;
+    [[nodiscard]] std::optional<FilePaths> getFilePaths() const;
 
-    std::string getErrorMessage() const;
+    [[nodiscard]] std::string getErrorMessage() const;
 
-    // Funciones de validación
-    bool validateInfo();
-    bool validateMaxLevel();
-    bool validateResize();
-    bool validateCutFreq();
-    bool validateCompress();
+    // Funciones de validación marcadas como const
+    [[nodiscard]] bool validateInfo() const;
+    [[nodiscard]] bool validateMaxLevel() const;
+    [[nodiscard]] bool validateResize() const;
+    [[nodiscard]] bool validateCutFreq() const;
+    [[nodiscard]] bool validateCompress() const;
 
     private:
     std::vector<std::string> args;
-    std::string errorMessage;
-
-    // Agregar las variables faltantes
-    std::string operation;
-    std::string inputFile;
+    mutable std::string errorMessage;
+    mutable std::string operation;
+    mutable std::string inputFile;
+    mutable std::string outputFile;
 };
 
 #endif // PROGARGS_HPP

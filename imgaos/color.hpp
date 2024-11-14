@@ -2,52 +2,39 @@
 #define COLOR_HPP
 
 #include <vector>
-#include <string>
-#include <iostream>
-#include <functional>  // Necesario para std::hash
+// #include <array>
 #include <cstdint>
+#include <functional>
+#include "imageinfo.hpp"  // Para usar PPMHeader y leer maxColorValue
 
-struct Color {
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
-
-    Color(uint8_t r, uint8_t g, uint8_t b) : red(r), green(g), blue(b) {}
-
-    // Comparador de igualdad para usar Color como clave en unordered_map
-    bool operator==(const Color& other) const {
-        return red == other.red && green == other.green && blue == other.blue;
-    }
-
-    // Función para imprimir el color (útil para depuración)
-    void print() const {
-        std::cout << "R: " << static_cast<int>(red)
-                  << " G: " << static_cast<int>(green)
-                  << " B: " << static_cast<int>(blue) << std::endl;
-    }
+// Estructura para representar un color en formato RGB
+struct RGBColor {
+    uint16_t red;
+    uint16_t green;
+    uint16_t blue;
 };
 
-// Especialización de std::hash para la estructura Color
-namespace std {
-    template <>
-    struct hash<Color> {
-        size_t operator()(const Color& color) const {
-            return ((std::hash<uint8_t>()(color.red) ^
-                     (std::hash<uint8_t>()(color.green) << 1)) >> 1) ^
-                     (std::hash<uint8_t>()(color.blue) << 1);
-        }
-    };
-}
-
-class ColorPalette {
+class Color {
     public:
-    void addColor(const Color& color);
-    Color getColor(size_t index) const;
-    size_t size() const;
-    void printPalette() const;
+    RGBColor rgb;
 
-    private:
-    std::vector<Color> colors;
+    // Constructor para inicializar colores
+    explicit Color(RGBColor color) noexcept;
+
+    // Cargar color desde datos binarios según maxColorValue en header
+    [[nodiscard]] static Color fromBinary(const uint8_t* data, const PPMHeader& header) noexcept;
+
+    // Escribir color a datos binarios según maxColorValue en header
+    void writeToBinary(std::vector<uint8_t>& buffer, const PPMHeader& header) const;
+
+    // Comparador de igualdad para usar Color como clave en unordered_map
+    [[nodiscard]] bool operator==(const Color& other) const noexcept;
+};
+
+// Especialización de std::hash para la clase Color
+template <>
+struct std::hash<Color> {
+    size_t operator()(const Color& color) const noexcept;
 };
 
 #endif // COLOR_HPP
