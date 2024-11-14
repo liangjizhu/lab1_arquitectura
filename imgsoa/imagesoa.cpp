@@ -11,12 +11,26 @@
 #include <string>
 #include <algorithm>
 #include <numeric>
+#include "imagesoa.hpp"
+#include "binaryio.hpp"
+#include "imageinfo.hpp"
+#include "color.hpp"
+#include "progargs.hpp"
+
+#include <vector>
+#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <numeric>
 #include <tuple>
 
 #include <unordered_set>
 #include <limits>
 #include <cmath>
 #include <memory>
+
 // Constantes descriptivas
 constexpr uint16_t BYTE_MASK = 0xFF;
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
@@ -173,6 +187,108 @@ void compressSoA(const FilePaths& paths){
 }
 /********************************************************************************************************/
 
+namespace imgsoa {
+
+  bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputFile, int newWidth, int newHeight) {
+    // Step 1: Read the image from the input file
+    PPMHeader header;
+    std::vector<uint8_t> data;
+    try {
+      data = readPPMData(inputFile, header);  // Ensure readPPMData is defined
+    } catch (const std::runtime_error& e) {
+      std::cerr << "Error: Failed to read image data - " << e.what() << '\n';
+      return false;
+    }
+
+    // Step 2: Convert data to SOA format
+    ImageSOA image;
+    image.width = header.width;
+    image.height = header.height;
+    image.redChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+    image.greenChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+    image.blueChannel.resize(static_cast<size_t>(image.width) * static_cast<size_t>(image.height));
+
+    for (size_t i = 0, j = 0; i < data.size(); i += 3, ++j) {
+      image.redChannel[j] = data[i];
+      image.greenChannel[j] = data[i + 1];
+      image.blueChannel[j] = data[i + 2];
+    }
+
+    // Step 3: Resize the image
+    ImageSOA resizedImage = resizeImageSOA(image, newWidth, newHeight);
+
+    // Step 4: Convert resizedImage to a flat uint8_t vector
+    std::vector<uint8_t> resizedData(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight) * 3);
+    for (size_t j = 0, k = 0; j < resizedData.size(); j += 3, ++k) {
+      resizedData[j] = resizedImage.redChannel[k];
+      resizedData[j + 1] = resizedImage.greenChannel[k];
+      resizedData[j + 2] = resizedImage.blueChannel[k];
+    }
+
+    // Step 5: Write resized image to output file
+    try {
+      writePPM(outputFile, resizedData, newWidth, newHeight);  // Ensure writePPM is defined
+    } catch (const std::runtime_error& e) {
+      std::cerr << "Error: Failed to write resized image - " << e.what() << '\n';
+      return false;
+    }
+
+    return true;
+  }
+
+}  // namespace imgsoa
+
+ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
+    ImageSOA resizedImage;
+    resizedImage.width = newWidth;
+    resizedImage.height = newHeight;
+
+    // Resize channels with size_t cast
+    resizedImage.redChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+    resizedImage.greenChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+    resizedImage.blueChannel.resize(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight));
+
+    // Calculate scaling ratios with float casts
+    float xRatio = static_cast<float>(image.width - 1) / static_cast<float>(newWidth - 1);
+    float yRatio = static_cast<float>(image.height - 1) / static_cast<float>(newHeight - 1);
+
+    for (int y = 0; y < newHeight; ++y) {
+        for (int x = 0; x < newWidth; ++x) {
+            float srcX = static_cast<float>(x) * xRatio;
+            float srcY = static_cast<float>(y) * yRatio;
+
+            size_t xL = std::min(static_cast<size_t>(srcX), static_cast<size_t>(image.width - 1));
+            size_t yL = std::min(static_cast<size_t>(srcY), static_cast<size_t>(image.height - 1));
+            size_t xH = std::clamp(xL + 1, size_t(0), static_cast<size_t>(image.width - 1));
+            size_t yH = std::clamp(yL + 1, size_t(0), static_cast<size_t>(image.height - 1));
+
+            float xWeight = srcX - static_cast<float>(xL);
+            float yWeight = srcY - static_cast<float>(yL);
+
+            auto interpolate = [&](const std::vector<uint8_t>& channel) {
+                float topLeft = static_cast<float>(channel[yL * static_cast<size_t>(image.width) + xL]);
+                float topRight = static_cast<float>(channel[yL * static_cast<size_t>(image.width) + xH]);
+                float bottomLeft = static_cast<float>(channel[yH * static_cast<size_t>(image.width) + xL]);
+                float bottomRight = static_cast<float>(channel[yH * static_cast<size_t>(image.width) + xH]);
+
+                return static_cast<uint8_t>(
+                    (topLeft * (1.0f - xWeight) * (1.0f - yWeight)) +
+                    (topRight * xWeight * (1.0f - yWeight)) +
+                    (bottomLeft * (1.0f - xWeight) * yWeight) +
+                    (bottomRight * xWeight * yWeight)
+                );
+            };
+
+            size_t index = static_cast<size_t>(y) * static_cast<size_t>(newWidth) + static_cast<size_t>(x);
+
+            resizedImage.redChannel[index] = interpolate(image.redChannel);
+            resizedImage.greenChannel[index] = interpolate(image.greenChannel);
+            resizedImage.blueChannel[index] = interpolate(image.blueChannel);
+        }
+    }
+
+    return resizedImage;
+}
 
 //************PRUEBAS CON ÁBOLES*************/
 
@@ -241,7 +357,7 @@ std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontra
 
 constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
 constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
-constexpr int MASK = 0xFF;   
+constexpr int MASK = 0xFF;
 
 void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& replacementMap) {
     // Crear un mapa de búsqueda más eficiente usando un único entero como clave
@@ -252,11 +368,11 @@ void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered
         const uint32_t oldPacked = (static_cast<uint32_t>(std::get<0>(oldColor)) << SHIFT_RED) |
                             (static_cast<uint32_t>(std::get<1>(oldColor)) << SHIFT_GREEN) |
                             (static_cast<uint32_t>(std::get<2>(oldColor)));
-                            
+
         const uint32_t newPacked = (static_cast<uint32_t>(std::get<0>(newColor)) << SHIFT_RED) |
                             (static_cast<uint32_t>(std::get<1>(newColor)) << SHIFT_GREEN) |
                             (static_cast<uint32_t>(std::get<2>(newColor)));
-                            
+
         fastReplacementMap[oldPacked] = newPacked;
     }
     // Obtener referencias directas a los canales para evitar llamadas a métodos
@@ -329,8 +445,8 @@ std::unique_ptr<KDNode> construirKDTree(std::vector<std::tuple<uint16_t, uint16_
 // Calcular la distancia al cuadrado entre dos colores
 double calcularDistanciaCuadrada(const std::tuple<uint16_t, uint16_t, uint16_t>& color1,
                                  const std::tuple<uint16_t, uint16_t, uint16_t>& color2) {
-    return std::pow(std::get<0>(color1) - std::get<0>(color2), 2) + 
-           std::pow(std::get<1>(color1) - std::get<1>(color2), 2) + 
+    return std::pow(std::get<0>(color1) - std::get<0>(color2), 2) +
+           std::pow(std::get<1>(color1) - std::get<1>(color2), 2) +
            std::pow(std::get<2>(color1) - std::get<2>(color2), 2);
 }
 
@@ -385,7 +501,6 @@ void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, in
     }
 }
 
-
 void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
     std::ofstream outFile(outputFile, std::ios::binary);
     if (!outFile.is_open()) {
@@ -397,7 +512,7 @@ void writePPM(const std::string& outputFile, const PPMHeader& header, const Colo
     std::vector<char> writeBuffer(BUFFER_SIZE);
     outFile.rdbuf()->pubsetbuf(writeBuffer.data(), BUFFER_SIZE);
     // Pre-calcular el tamaño del encabezado y reservar espacio
-    const std::string headerStr = "P6\n" + std::to_string(header.width) + " " + 
+    const std::string headerStr = "P6\n" + std::to_string(header.width) + " " +
                            std::to_string(header.height) + "\n255\n";
     // Escribir encabezado con conversión segura de tipo
     outFile.write(headerStr.c_str(), static_cast<std::streamsize>(headerStr.size()));
@@ -418,7 +533,7 @@ void writePPM(const std::string& outputFile, const PPMHeader& header, const Colo
     }
     // Escribir todos los datos de píxeles de una sola vez con conversión segura de tipo
     //NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
-    outFile.write(reinterpret_cast<const char*>(pixelBuffer.data()), 
+    outFile.write(reinterpret_cast<const char*>(pixelBuffer.data()),
               static_cast<std::streamsize>(bufferSize));
     //NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
     // Forzar la escritura de cualquier dato en el buffer
@@ -435,7 +550,7 @@ constexpr int MASK = 0xFF;*/
 std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrarColoresReemplazo(
     const std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& colorsToRemoveSet,
     const ColorChannels& colorChannels) {
-    
+
     std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> replacementMap;
 
     // Filtramos los colores candidatos para reemplazo (solo aquellos que no están en la lista de eliminados).
@@ -512,6 +627,3 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     sustituirColoresEnImagen(colorChannels, replacementMap);
     writePPM(outputFile, header, colorChannels);
 }
-
-//se quedó pillado el push
-// NOLINTEND(misc-no-recursion)

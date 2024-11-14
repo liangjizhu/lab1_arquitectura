@@ -44,4 +44,15 @@ void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
                            const std::unordered_map<std::string, int>& colorIndex);
 /********************************************************************************************************/
 
+struct ImageSOA {
+  std::vector<uint8_t> redChannel;
+  std::vector<uint8_t> greenChannel;
+  std::vector<uint8_t> blueChannel;
+  int width;
+  int height;
+};
+
+ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight);
+
+
 #endif // IMAGESOA_HPP

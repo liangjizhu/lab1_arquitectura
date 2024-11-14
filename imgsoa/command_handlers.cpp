@@ -1,4 +1,5 @@
 #include "command_handlers.hpp"
+#include "binaryio.hpp"
 #include "imageinfo.hpp"
 #include "imgsoa/imagesoa.hpp"
 #include <iostream>
@@ -30,7 +31,22 @@ int handleResize(const ProgramArgs& args) {
     std::cerr << args.getErrorMessage() << '\n';
     return -1;
   }
-  // TODO: Implementar resize
+
+  auto start = std::chrono::high_resolution_clock::now();
+  const int width = args.getResizeWidth();
+  const int height = args.getResizeHeight();
+  std::cout << "Resizing to " << width << "x" << height << '\n';
+
+  // Delegate the resizing to a separate function in imagesoa.cpp
+  if (!imgsoa::resizeAndSaveImage(args.getInputFile(), args.getOutputFile(), width, height)) {
+    std::cerr << "Error: Resizing failed.\n";
+    return -1;
+  }
+
+  std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> const duration = end - start;
+  std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
   return 0;
 }
 
@@ -57,6 +73,8 @@ int handleCompress(const ProgramArgs& args) {
     }
 
     std::cout << "Compressing file..." << '\n';
+
+    // Medir el tiempo de compresión
     auto start = std::chrono::high_resolution_clock::now();
     compressSoA(paths.value());
     auto end = std::chrono::high_resolution_clock::now();
