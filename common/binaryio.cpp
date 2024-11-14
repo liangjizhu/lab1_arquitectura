@@ -39,12 +39,6 @@ void BinaryIO::writeBinaryFile(const std::string& filename, const std::vector<ui
   }
 }
 
-struct PPMHeader {
-  int width;
-  int height;
-  int maxColorValue;
-};
-
 std::vector<uint8_t> readPPMData(const std::string& filename, PPMHeader& header) {
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {

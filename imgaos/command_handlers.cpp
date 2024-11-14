@@ -32,6 +32,7 @@ int handleResize(const ProgramArgs& args) {
         return -1;
     }
 
+    auto start = std::chrono::high_resolution_clock::now();
     int const width = args.getResizeWidth();
     int const height = args.getResizeHeight();
     std::cout << "Resizing to " << width << "x" << height << '\n';
@@ -51,6 +52,9 @@ int handleResize(const ProgramArgs& args) {
     writePPM(args.getOutputFile(), resizedData, width, height);
 
     std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> const duration = end - start;
+    std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
     return 0;
 }
 

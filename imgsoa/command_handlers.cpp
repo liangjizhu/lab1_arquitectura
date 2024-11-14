@@ -32,6 +32,7 @@ int handleResize(const ProgramArgs& args) {
     return -1;
   }
 
+  auto start = std::chrono::high_resolution_clock::now();
   const int width = args.getResizeWidth();
   const int height = args.getResizeHeight();
   std::cout << "Resizing to " << width << "x" << height << '\n';
@@ -43,38 +44,38 @@ int handleResize(const ProgramArgs& args) {
   }
 
   std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> const duration = end - start;
+  std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
   return 0;
 }
 
 // Función para manejar el comando 'cutfreq'
 int handleCutFreq(const ProgramArgs& args) {
-  if (!args.validateCutFreq()) {
+    if (!args.validateCutFreq()) {
         std::cerr << args.getErrorMessage() << '\n';
         return -1;
     }
-    int const frequency = args.getCutFreq();
-    std::cout << "Cutting frequency to: " << frequency << '\n';
-    processCutfreq(args.getInputFile(), frequency, args.getOutputFile());
-
-    // Aquí iría la lógica para ajustar la frecuencia del archivo
     return 0;
 }
 
 // Función para manejar el comando 'compress'
 int handleCompress(const ProgramArgs& args) {
-  auto paths = args.getFilePaths();
-  if (!args.validateCompress()) {
-    std::cerr << args.getErrorMessage() << '\n';
-    return -1;
-  }
+    auto paths = args.getFilePaths();
+    if (!args.validateCompress()) {
+        std::cerr << args.getErrorMessage() << '\n';
+        return -1;
+    }
 
-  std::cout << "Compressing file..." << '\n';
-  auto start = std::chrono::high_resolution_clock::now();
-  compressSoA(paths.value());
-  auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Compressing file..." << '\n';
 
-  std::chrono::duration<double> const duration = end - start;
-  std::cout << "File compressed to " << args.getOutputFile() << '\n';
-  std::cout << "Time taken: " << duration.count() << " seconds" << '\n';
-  return 0;
+    // Medir el tiempo de compresión
+    auto start = std::chrono::high_resolution_clock::now();
+    compressSoA(paths.value());
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> const duration = end - start;
+    std::cout << "File compressed to " << args.getOutputFile() << std::endl;
+    std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
+    return 0;
 }
