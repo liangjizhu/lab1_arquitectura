@@ -290,6 +290,8 @@ ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
     return resizedImage;
 }
 
+
+
 //************PRUEBAS CON ÁBOLES*************/
 
 void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency) {
@@ -340,10 +342,24 @@ std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontra
     }
 
     // Ordenar el vector por frecuencia en orden ascendente
-    std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), [](const auto& colora, const auto& colorb) {
-        return colora.second < colorb.second;
-    });
 
+      // En caso de empate, ordenar por azul (descendente), luego verde (descendente), y finalmente rojo (descendente)
+    std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), [](const auto& colora, const auto& colorb) {
+        if (colora.second != colorb.second) {
+            return colora.second < colorb.second;
+        } else {
+            // Comparar componentes b, luego g, luego r en orden descendente para los empates
+            const auto& [ra, ga, ba] = colora.first;
+            const auto& [rb, gb, bb] = colorb.first;
+            if (ba != bb) {
+                return ba > bb;
+            } else if (ga != gb) {
+                return ga > gb;
+            } else {
+                return ra > rb;
+            }
+        }
+    });
     // Crear un conjunto para los colores menos frecuentes
     std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> colores_menos_frecuentes;
 
@@ -501,6 +517,7 @@ void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, in
     }
 }
 
+
 void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
     std::ofstream outFile(outputFile, std::ios::binary);
     if (!outFile.is_open()) {
@@ -627,3 +644,6 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     sustituirColoresEnImagen(colorChannels, replacementMap);
     writePPM(outputFile, header, colorChannels);
 }
+
+//se quedó pillado el push
+// NOLINTEND(misc-no-recursion)
