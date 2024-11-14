@@ -619,6 +619,7 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     ColorChannels colorChannels(totalPixels);
     std::unordered_map<uint32_t, int, HashColor> colorFrequency;
     readImageAndStoreChannels(inputFile, colorChannels, colorFrequency);
+    std::cout << "Colores únicos al principio: " << colorFrequency.size() << '\n';
     auto coloresMenosFrecuentes = encontrar_colores_menos_frecuentes_2(colorFrequency, numColors);
     std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> coloresRestantes;
     for (const auto& [color, _] : colorFrequency) {
@@ -643,6 +644,10 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     }
     sustituirColoresEnImagen(colorChannels, replacementMap);
     writePPM(outputFile, header, colorChannels);
+    ColorChannels colorChannels2(totalPixels);
+    std::unordered_map<uint32_t, int, HashColor> colorFrequency2;
+    readImageAndStoreChannels(outputFile, colorChannels2, colorFrequency2);
+    std::cout << "Colores únicos al final: " << colorFrequency2.size() << '\n';
 }
 
 //se quedó pillado el push

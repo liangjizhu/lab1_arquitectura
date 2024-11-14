@@ -881,7 +881,7 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
         
         std::cout << "Calculando frecuencias..." << '\n';
         calculateColorFrequencies(imageData);
-        
+        std::cout<< "Colores únicos al principio: " << imageData.uniqueColors.size() << '\n';
         std::cout << "Identificando colores menos frecuentes..." << '\n';
         const std::vector<Color> menosFrecuentes = findLessFrequentColors(imageData, numColors);
         
@@ -894,7 +894,9 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
         
         std::cout << "Escribiendo imagen modificada..." << '\n';
         escribirPPM(outputFile, imageData.pixels, imageData.width, imageData.height);
-        
+        ImageData imageData2 = loadImageData(outputFile);
+        calculateColorFrequencies(imageData2);
+        std::cout<< "Colores únicos al final: " << imageData2.uniqueColors.size() << '\n';
         std::cout << "Proceso completado." << '\n';
     } catch (const std::exception& e) {
         std::cerr << "Error durante el procesamiento: " << e.what() << '\n';
