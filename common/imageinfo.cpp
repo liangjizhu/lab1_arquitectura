@@ -103,5 +103,3 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
 
     return {width, height};
 }
-
-
