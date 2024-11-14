@@ -13,17 +13,17 @@
 
 
 
-// COMPRESS
-// Función para la compresión usando Structure of Arrays (SoA)
+/********************************************* COMPRESS SOA *********************************************/
+// Función principal para comprimir una imagen en formato SOA
 void compressSoA(const FilePaths& paths);
 
-// Crear índice de colores
+// Crea un índice de colores único a partir de los canales de color
 std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable);
 
-// Ordenar la tabla de colores en orden lexicográfico RGB
+// Ordenar la tabla de colores en orden RGB
 std::vector<size_t> sortColorTable(ColorChannels& colorTable);
 
-// Crear tabla de colores ordenada
+// Crea una nueva tabla de colores (sortedColorTable) siguiendo el orden de los índices proporcionados
 ColorChannels createSortedColorTable(const ColorChannels& colorTable, const std::vector<size_t>& indices);
 
 // Reconstruir el índice de colores para la tabla ordenada
@@ -42,5 +42,6 @@ void appendColorTableSoA(std::vector<uint8_t>& compressedData,
 void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
                            const ColorChannels& channels,
                            const std::unordered_map<std::string, int>& colorIndex);
+/********************************************************************************************************/
 
 #endif // IMAGESOA_HPP

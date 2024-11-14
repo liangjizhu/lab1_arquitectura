@@ -31,7 +31,6 @@ class ProgramArgs {
     [[nodiscard]] bool validateMaxLevel() const;
     [[nodiscard]] bool validateResize() const;
     [[nodiscard]] bool validateCutFreq() const;
-    [[nodiscard]] bool validateCompress() const;
 
     private:
     std::vector<std::string> args;

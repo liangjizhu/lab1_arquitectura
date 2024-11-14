@@ -50,19 +50,19 @@ int handleCutFreq(const ProgramArgs& args) {
 
 // Función para manejar el comando 'compress'
 int handleCompress(const ProgramArgs& args) {
-  auto paths = args.getFilePaths();
-  if (!args.validateCompress()) {
-    std::cerr << args.getErrorMessage() << '\n';
-    return -1;
-  }
+    auto paths = args.getFilePaths();
+    if (!args.validate()) {
+        std::cerr << args.getErrorMessage() << '\n';
+        return -1;
+    }
 
-  std::cout << "Compressing file..." << '\n';
-  auto start = std::chrono::high_resolution_clock::now();
-  compressSoA(paths.value());
-  auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Compressing file..." << '\n';
+    auto start = std::chrono::high_resolution_clock::now();
+    compressSoA(paths.value());
+    auto end = std::chrono::high_resolution_clock::now();
 
-  std::chrono::duration<double> const duration = end - start;
-  std::cout << "File compressed to " << args.getOutputFile() << '\n';
-  std::cout << "Time taken: " << duration.count() << " seconds" << '\n';
-  return 0;
+    std::chrono::duration<double> const duration = end - start;
+    std::cout << "File compressed to " << args.getOutputFile() << '\n';
+    std::cout << "Time taken: " << duration.count() << " seconds" << '\n';
+    return 0;
 }

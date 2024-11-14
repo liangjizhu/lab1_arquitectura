@@ -67,7 +67,7 @@ int handleCutFreq(const ProgramArgs& args) {
 
 // Función para manejar el comando 'compress'
 int handleCompress(const ProgramArgs& args) {
-    if (!args.validateCompress()) {
+    if (!args.validate()) {
         std::cerr << args.getErrorMessage() << '\n';
         return -1;
     }

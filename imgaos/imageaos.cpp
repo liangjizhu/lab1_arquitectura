@@ -174,12 +174,14 @@ void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
     ////Calcular la distancia euclídea con los demás colores
 //}
 
-// COMPRESS AOS
+/********************************************* COMPRESS AOS *********************************************/
+// Extraer los píxeles de la imagen a partir de los datos binarios (fileData)
 std::vector<Color> extractImagePixels(const std::vector<uint8_t>& fileData, const PPMHeader& header) {
     const size_t numPixels = static_cast<size_t>(header.width) * static_cast<size_t>(header.height);
+    // Determina el número de píxeles y el tamaño de cada píxel (3 bytes para imágenes de 8 bits y 6 bytes para imágenes de 16 bits)
     const size_t pixelSize = (header.maxColorValue > MAX_COLOR_VALUE_8BIT) ? 6 : 3;
     const size_t pixelStart = fileData.size() - numPixels * pixelSize;
-
+    // Lista de colores
     std::vector<Color> imagePixels;
     imagePixels.reserve(numPixels);
 
@@ -190,7 +192,9 @@ std::vector<Color> extractImagePixels(const std::vector<uint8_t>& fileData, cons
     return imagePixels;
 }
 
+// Genera una tabla de colores únicos (colorTable) y un mapa de índices (colorIndex)
 std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(const std::vector<Color>& imagePixels) {
+    // Se reserva memoria del mismo tamaño, tanto para la tabla de colores como para el mapa de índices
     std::vector<Color> colorTable;
     colorTable.reserve(COLOR_TABLE_RESERVE_SIZE);
 
@@ -199,13 +203,15 @@ std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(c
 
     // Crear la tabla de colores y actualizar el mapa de índices
     for (const auto& pixel : imagePixels) {
+        // Si pixel ya está en colorIndex, inserted será false y no se agrega a la tabla de colores (colorTable)
+        // Si pixel no está en el mapa, se inserta con el índice actual de colorTable y se agrega a la tabla
         auto [it, inserted] = colorIndex.emplace(pixel, static_cast<int>(colorTable.size()));
         if (inserted) {
             colorTable.push_back(pixel);
         }
     }
 
-    // Ordenar la tabla de colores (orden lexicográfico RGB)
+    // Ordenar la tabla de colores (orden RGB)
     std::ranges::sort(colorTable.begin(), colorTable.end(), [](const Color& colorA, const Color& colorB) {
         return std::tie(colorA.rgb.red, colorA.rgb.green, colorA.rgb.blue) <
                std::tie(colorB.rgb.red, colorB.rgb.green, colorB.rgb.blue);
@@ -221,27 +227,32 @@ std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(c
     return {colorTable, colorIndex};
 }
 
+// Añade la tabla de colores al archivo comprimido
 void appendColorTable(std::vector<uint8_t>& compressedData, const std::vector<Color>& colorTable, const PPMHeader& header) {
     for (const auto& color : colorTable) {
         color.writeToBinary(compressedData, header);
     }
 }
 
+// Añade los índices de los colores de los píxeles al archivo comprimido
 void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<Color>& imagePixels, const std::unordered_map<Color, int>& colorIndex) {
+    // Determina el tamaño del índice (1, 2 o 4 bytes) dependiendo del tamaño de la tabla de colores.
     size_t colorIndexSize = 1;
     if (colorIndex.size() > COLOR_TABLE_RESERVE_SIZE && colorIndex.size() <= MAX_COLOR_VALUE_16BIT) {
         colorIndexSize = 2;
     } else if (colorIndex.size() > MAX_COLOR_VALUE_16BIT) {
         colorIndexSize = 4;
     }
-
+    // Reservar memoria para los índices de los colores
     compressedData.reserve(compressedData.size() + imagePixels.size() * colorIndexSize);
-
+    // Recorre cada píxel de imagePixels
     for (const auto& pixel : imagePixels) {
-        const int index = colorIndex.at(pixel);  // Declarar 'index' como const
+        // at() -> excepción si el píxel no está en el mapa, garantizando seguridad de acceso
+        const int index = colorIndex.at(pixel);
 
         auto appendIndex = [&compressedData](const int index, const size_t size) {
             for (size_t i = 0; i < size; ++i) {
+                // Añadir el índice al archivo comprimido, byte por byte
                 compressedData.push_back(static_cast<uint8_t>((index >> (BITS_PER_BYTE * i)) & BYTE_MASK));
             }
         };
@@ -249,35 +260,39 @@ void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<
     }
 }
 
+// Función principal para comprimir una imagen en formato AOS
 void compressAoS(const FilePaths& paths) {
+    // Asegurarse de que la extensión del archivo de salida sea .cppm
     std::string const outputFile = ensureCppmExtension(paths.outputFile);
-
+    // Leer los datos binarios del archivo de entrada
     const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
     if (fileData.empty()) {
         std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << paths.inputFile << '\n';
         return;
     }
-
+    // Leer el encabezado del archivo PPM
     PPMHeader header{};
     if (!readPPMHeader(paths.inputFile, header)) {
         std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
         return;
     }
-
+    // Extraer los píxeles de la imagen a partir de los datos binarios
     auto imagePixels = extractImagePixels(fileData, header);
+    // Crear la tabla de colores y el mapa de índices
     auto [colorTable, colorIndex] = createColorTable(imagePixels);
+    // Generar el encabezado del archivo comprimido
     std::string headerStr = generateHeader(header, static_cast<int>(colorTable.size()));
-
+    // Crear un vector para almacenar los datos comprimidos
     std::vector<uint8_t> compressedData;
     compressedData.reserve(
         headerStr.size() +
         static_cast<size_t>(header.width) * static_cast<size_t>(header.height)
     );
-
+    // Añadir el encabezado y los datos comprimidos al archivo
     compressedData.insert(compressedData.end(), headerStr.begin(), headerStr.end());
     appendColorTable(compressedData, colorTable, header);
     appendPixelIndices(compressedData, imagePixels, colorIndex);
-
+    // Escribir los datos comprimidos en el archivo de salida
     BinaryIO::writeBinaryFile(outputFile, compressedData);
 }
 

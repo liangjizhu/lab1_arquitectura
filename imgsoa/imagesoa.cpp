@@ -12,20 +12,8 @@
 #include <algorithm>
 #include <numeric>
 #include <tuple>
-#include "imagesoa.hpp"
-#include "binaryio.hpp"
-#include "imageinfo.hpp"
-#include "color.hpp"
-#include "progargs.hpp"
-#include <vector>
-#include <unordered_map>
+
 #include <unordered_set>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <algorithm>
-#include <numeric>
-#include <tuple>
 #include <limits>
 #include <cmath>
 #include <memory>
@@ -36,18 +24,21 @@ constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 
-// Crear índice de colores
+/********************************************* COMPRESS SOA *********************************************/
+// Crea un índice de colores único a partir de los canales de color
 std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable) {
+
     std::unordered_map<std::string, int> colorIndex;
     colorIndex.reserve(COLOR_TABLE_RESERVE_SIZE);
 
     size_t tableIndex = 0;
 
     for (size_t i = 0; i < channels.size(); ++i) {
+        // Genera una clave de color como cadena ("R, G, B") para cada píxel
         std::string const colorKey = std::to_string(channels.getRedChannel()[i]) + "," +
                                      std::to_string(channels.getGreenChannel()[i]) + "," +
                                      std::to_string(channels.getBlueChannel()[i]);
-
+        // Si el color es nuevo (no está en el índice), lo agrega a la colorTable
         auto [it, inserted] = colorIndex.emplace(colorKey, static_cast<int>(tableIndex));
         if (inserted) {
             colorTable.getRedChannel().push_back(channels.getRedChannel()[i]);
@@ -60,11 +51,17 @@ std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channe
     return colorIndex;
 }
 
-// Ordenar la tabla de colores en orden lexicográfico RGB
+// Ordenar la tabla de colores en orden RGB
 std::vector<size_t> sortColorTable(ColorChannels& colorTable) {
     std::vector<size_t> indices(colorTable.getRedChannel().size());
     std::iota(indices.begin(), indices.end(), 0);
-
+    // std::ranges::sort -> ordenar contenedores con una sintaxis más concisa y segura
+    // Lambda [&colorTable](size_t indexA, size_t indexB) -> [&colorTable] captura la referencia a colorTable, permitiendo acceder a sus metodos
+    // std::tie crea una tupla temporal con los valores (R, G, B) del color en la posición indexA y lo compara con la tupla del color en indexB
+    // (R1, G1, B1) < (R2, G2, B2) si:
+    // - R1 < R2
+    // - o si R1 == R2 y G1 < G2
+    // - o si R1 == R2 y G1 == G2 y B1 < B2
     std::ranges::sort(indices.begin(), indices.end(), [&colorTable](size_t indexA, size_t indexB) {
         return std::tie(colorTable.getRedChannel()[indexA], colorTable.getGreenChannel()[indexA], colorTable.getBlueChannel()[indexA]) <
                std::tie(colorTable.getRedChannel()[indexB], colorTable.getGreenChannel()[indexB], colorTable.getBlueChannel()[indexB]);
@@ -73,7 +70,7 @@ std::vector<size_t> sortColorTable(ColorChannels& colorTable) {
     return indices;
 }
 
-// Crear tabla de colores ordenada
+// Crea una nueva tabla de colores (sortedColorTable) siguiendo el orden de los índices proporcionados
 ColorChannels createSortedColorTable(const ColorChannels& colorTable, const std::vector<size_t>& indices) {
     ColorChannels sortedColorTable(colorTable.size());
 
@@ -101,9 +98,10 @@ std::unordered_map<std::string, int> rebuildColorIndex(const ColorChannels& sort
     return colorIndex;
 }
 
-// Crear tabla de colores y mapa de índices (SoA)
+// Función principal para crear la tabla de colores
 std::tuple<ColorChannels, std::unordered_map<std::string, int>>
 createColorTableSoA(const ColorChannels& channels) {
+    // Crear la tabla de colores y el índice
     ColorChannels colorTable(channels.size());
     auto colorIndex = buildColorIndex(channels, colorTable);
 
@@ -141,14 +139,15 @@ void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
 
 // Función principal de compresión SoA
 void compressSoA(const FilePaths& paths){
+    // Asegurarse de que la extensión del archivo de salida sea .cppm
     std::string const outputFile = ensureCppmExtension(paths.outputFile);
-
+    // Leer los datos binarios del archivo de entrada
     const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
     if (fileData.empty()) {
       std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << paths.inputFile << '\n';
       return;
     }
-
+    // Leer el encabezado del archivo PPM
     PPMHeader header{};
     if (!readPPMHeader(paths.inputFile, header)) {
       std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
@@ -172,6 +171,7 @@ void compressSoA(const FilePaths& paths){
     // Escribir el archivo comprimido
     BinaryIO::writeBinaryFile(outputFile, compressedData);
 }
+/********************************************************************************************************/
 
 
 //************PRUEBAS CON ÁBOLES*************/
