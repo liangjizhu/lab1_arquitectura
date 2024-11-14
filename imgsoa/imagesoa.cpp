@@ -294,6 +294,7 @@ ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
 
 //************PRUEBAS CON ÁBOLES*************/
 
+//NOLINTBEGIN(misc-no-recursion)
 void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency) {
     PPMHeader header{};
     if (!readPPMHeader(inputFile, header)) {
@@ -330,7 +331,6 @@ void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colo
 
 std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrar_colores_menos_frecuentes_2(
     const std::unordered_map<uint32_t, int, HashColor>& frecuencia, int n) {
-
     // Vector para almacenar colores con sus frecuencias y ordenar
     std::vector<std::pair<std::tuple<uint16_t, uint16_t, uint16_t>, int>> colores_frecuentes;
     // Convertimos cada color en una tupla RGB y lo almacenamos junto con su frecuencia
@@ -340,25 +340,22 @@ std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontra
         const uint16_t blue = color & 0xFF;
         colores_frecuentes.emplace_back(std::make_tuple(red, green, blue), freq);
     }
-
     // Ordenar el vector por frecuencia en orden ascendente
-
       // En caso de empate, ordenar por azul (descendente), luego verde (descendente), y finalmente rojo (descendente)
     std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), [](const auto& colora, const auto& colorb) {
         if (colora.second != colorb.second) {
             return colora.second < colorb.second;
-        } else {
-            // Comparar componentes b, luego g, luego r en orden descendente para los empates
-            const auto& [ra, ga, ba] = colora.first;
-            const auto& [rb, gb, bb] = colorb.first;
-            if (ba != bb) {
-                return ba > bb;
-            } else if (ga != gb) {
-                return ga > gb;
-            } else {
-                return ra > rb;
-            }
         }
+        // Comparar componentes b, luego g, luego r en orden descendente para los empates
+        const auto& [ra, ga, ba] = colora.first;
+        const auto& [rb, gb, bb] = colorb.first;
+        if (ba != bb) {
+            return ba > bb;
+        }
+        if (ga != gb) {
+            return ga > gb;
+        }
+        return ra > rb;
     });
     // Crear un conjunto para los colores menos frecuentes
     std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> colores_menos_frecuentes;
@@ -651,4 +648,4 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
 }
 
 //se quedó pillado el push
-// NOLINTEND(misc-no-recursion)
+//NOLINTEND(misc-no-recursion)
