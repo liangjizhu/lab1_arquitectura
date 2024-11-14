@@ -5,6 +5,8 @@
 #include <bit>
 #include <limits>
 
+static constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
+
 // Lee un archivo binario y devuelve su contenido como un vector de bytes
 std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
@@ -59,22 +61,23 @@ std::vector<uint8_t> readPPMData(const std::string& filename, PPMHeader& header)
   file.ignore(1);
 
   // Verificar que el valor máximo de color sea válido
-  if (header.maxColorValue != 255) {
+  if (header.maxColorValue != COLOR_TABLE_RESERVE_SIZE -1) {
     throw std::runtime_error("Error: Unsupported max color value (only 255 is supported).");
   }
 
   // Calcular el tamaño esperado de los datos
-  size_t expected_size = static_cast<size_t>(header.width) * static_cast<size_t>(header.height) * 3;  // P6 es RGB, 3 canales
-  std::vector<uint8_t> data(expected_size);
+  const size_t expected_size = static_cast<size_t>(header.width) * static_cast<size_t>(header.height) * 3;  // P6 es RGB, 3 canales
+  std::vector<char> temp_data(expected_size);
 
   // Leer los datos binarios de la imagen, convertiendo expected_size a streamsize
-  file.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(expected_size));
+  file.read(temp_data.data(), static_cast<std::streamsize>(expected_size));
 
   // Verificar que se haya leído la cantidad exacta de datos
   if (file.gcount() != static_cast<std::streamsize>(expected_size)) {
     throw std::runtime_error("Error: Data size in file does not match width, height, and channels.");
   }
 
+  std::vector<uint8_t> data(temp_data.begin(), temp_data.end());
   return data;
 }
 
@@ -94,20 +97,22 @@ std::vector<uint8_t> readPPM(const std::string& filename, int& width, int& heigh
   file.ignore(1); // Ignorar el carácter de nueva línea después de maxColorValue
 
   // Verificación del valor máximo de color
-  if (maxColorValue != 255) {
+  if (maxColorValue != COLOR_TABLE_RESERVE_SIZE - 1) {
     throw std::runtime_error("Error: Unsupported max color value. Expected 255.");
   }
 
   // Calcular el tamaño esperado de los datos
-  size_t dataSize = static_cast<size_t>(width) * static_cast<size_t>(height) * 3;
-  std::vector<uint8_t> data(dataSize);
+  const size_t dataSize = static_cast<size_t>(width) * static_cast<size_t>(height) * 3;
+  std::vector<char> tempData(dataSize);
 
-  // Leer los datos de píxeles, convertiendo dataSize a streamsize
-  file.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(dataSize));
-  if (!file) {
+  // Leer los datos de píxeles directamente en tempData
+  file.read(tempData.data(), static_cast<std::streamsize>(dataSize));
+  if (file.gcount() != static_cast<std::streamsize>(dataSize)) {
     throw std::runtime_error("Error: Failed to read pixel data.");
   }
 
+  // Convertir tempData a std::vector<uint8_t>
+  std::vector<uint8_t> data(tempData.begin(), tempData.end());
   return data;
 }
 
@@ -117,11 +122,14 @@ void writePPM(const std::string& filename, const std::vector<uint8_t>& pixelData
     throw std::runtime_error("Error: Unable to open file " + filename + " for writing");
   }
 
-  // Escribir la cabecera del archivo PPM
+  // Write the PPM header
   file << "P6\n" << width << " " << height << "\n255\n";
 
-  // Escribir los datos de los píxeles en formato binario
-  file.write(reinterpret_cast<const char*>(pixelData.data()), static_cast<std::streamsize>(pixelData.size()));
+  // Convert pixelData to a std::vector<char> for writing
+  std::vector<char> pixelDataChar(pixelData.begin(), pixelData.end());
+
+  // Write the pixel data as binary
+  file.write(pixelDataChar.data(), static_cast<std::streamsize>(pixelDataChar.size()));
 
   if (!file) {
     throw std::runtime_error("Error: Failed to write to file " + filename);

@@ -10,6 +10,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <cmath>
 
 // Constante descriptiva para el tamaño de reserva inicial de la tabla de colores
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
@@ -331,96 +332,80 @@ namespace {
     float yRatio;
   };
 
+  // Function to calculate weights based on source coordinates
+  std::pair<float, float> calculateWeights(float srcX, float srcY, size_t lowerX, size_t lowerY) {
+    // Calculate x and y weights for interpolation
+    float xWeight = srcX - static_cast<float>(lowerX);
+    float yWeight = srcY - static_cast<float>(lowerY);
+
+    // Ensure weights are within the range [0, 1] for accuracy
+    xWeight = std::clamp(xWeight, 0.0F, 1.0F);
+    yWeight = std::clamp(yWeight, 0.0F, 1.0F);
+
+    return {xWeight, yWeight};
+  }
+
   std::pair<float, float> computeSourceCoordinates(int targetX, int targetY, const ScaleRatios& ratios) {
     const float srcX = static_cast<float>(targetX) * ratios.xRatio;
     const float srcY = static_cast<float>(targetY) * ratios.yRatio;
     return {srcX, srcY};
   }
-}
+
+  // Helper function to interpolate a single color channel
+  uint8_t interpolateChannel(uint8_t topLeft, uint8_t topRight, uint8_t bottomLeft, uint8_t bottomRight, float xWeight, float yWeight) {
+    return static_cast<uint8_t>(
+        (static_cast<float>(topLeft) * (1.0F - xWeight) * (1.0F - yWeight)) +
+        (static_cast<float>(topRight) * xWeight * (1.0F - yWeight)) +
+        (static_cast<float>(bottomLeft) * (1.0F - xWeight) * yWeight) +
+        (static_cast<float>(bottomRight) * xWeight * yWeight)
+    );
+  }
 
 
-namespace {
-  struct SourceCoordinates {
-    float srcX;
-    float srcY;
-    size_t lowerX;
-    size_t lowerY;
+  // Main function to interpolate the pixel
+  Pixel interpolatePixel(const Pixel& topLeft, const Pixel& topRight,
+                       const Pixel& bottomLeft, const Pixel& bottomRight,
+                       float xWeight, float yWeight) {
+    // Directly initialize Pixel with results from interpolateChannel for each color channel
+    return Pixel{
+      .r = interpolateChannel(topLeft.r, topRight.r, bottomLeft.r, bottomRight.r, xWeight, yWeight),
+      .g = interpolateChannel(topLeft.g, topRight.g, bottomLeft.g, bottomRight.g, xWeight, yWeight),
+      .b = interpolateChannel(topLeft.b, topRight.b, bottomLeft.b, bottomRight.b, xWeight, yWeight)
   };
-
-  // Updated function to calculate weights with better precision
-  std::pair<float, float> calculateWeights(const SourceCoordinates& coords) {
-    const float xWeight = std::clamp(coords.srcX - static_cast<float>(coords.lowerX), 0.0f, 1.0f);
-    const float yWeight = std::clamp(coords.srcY - static_cast<float>(coords.lowerY), 0.0f, 1.0f);
-    return {xWeight, yWeight};
   }
 }
 
-
-// Helper function to perform bilinear interpolation
-Pixel interpolatePixel(const Pixel& topLeft, const Pixel& topRight,
-                       const Pixel& bottomLeft, const Pixel& bottomRight,
-                       float xWeight, float yWeight) {
-  Pixel interpolatedPixel = {0, 0, 0};
-
-  interpolatedPixel.r = static_cast<uint8_t>(
-      (topLeft.r * (1.0f - xWeight) * (1.0f - yWeight)) +
-      (topRight.r * xWeight * (1.0f - yWeight)) +
-      (bottomLeft.r * (1.0f - xWeight) * yWeight) +
-      (bottomRight.r * xWeight * yWeight)
-  );
-  interpolatedPixel.g = static_cast<uint8_t>(
-      (topLeft.g * (1.0f - xWeight) * (1.0f - yWeight)) +
-      (topRight.g * xWeight * (1.0f - yWeight)) +
-      (bottomLeft.g * (1.0f - xWeight) * yWeight) +
-      (bottomRight.g * xWeight * yWeight)
-  );
-  interpolatedPixel.b = static_cast<uint8_t>(
-      (topLeft.b * (1.0f - xWeight) * (1.0f - yWeight)) +
-      (topRight.b * xWeight * (1.0f - yWeight)) +
-      (bottomLeft.b * (1.0f - xWeight) * yWeight) +
-      (bottomRight.b * xWeight * yWeight)
-  );
-  return interpolatedPixel;
-}
-
-
-
 Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
-    const size_t originalWidth = image[0].size();
-    const size_t originalHeight = image.size();
+  const size_t originalWidth = image[0].size();
+  const size_t originalHeight = image.size();
 
-    // Create the resized image
-    Image resizedImage(static_cast<size_t>(newHeight), std::vector<Pixel>(static_cast<size_t>(newWidth)));
+  Image resizedImage(static_cast<size_t>(newHeight), std::vector<Pixel>(static_cast<size_t>(newWidth)));
 
-    ScaleRatios ratios = {static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1),
-                          static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1)};
+  const ScaleRatios scaleRatios = {
+    .xRatio = static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1),
+    .yRatio = static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1)
+};
 
-    for (size_t y = 0; y < static_cast<size_t>(newHeight); ++y) {
-        for (size_t x = 0; x < static_cast<size_t>(newWidth); ++x) {
-            auto [srcX, srcY] = computeSourceCoordinates(static_cast<int>(x), static_cast<int>(y), ratios);
+  for (size_t rowIndex = 0; rowIndex < static_cast<size_t>(newHeight); ++rowIndex) {
+    for (size_t colIndex = 0; colIndex < static_cast<size_t>(newWidth); ++colIndex) {
+      auto [srcX, srcY] = computeSourceCoordinates(static_cast<int>(colIndex), static_cast<int>(rowIndex), scaleRatios);
 
-            // Integer indices of the neighboring pixels, cast to size_t
-            const size_t xL = std::min(static_cast<size_t>(srcX), originalWidth - 1);
-            const size_t yL = std::min(static_cast<size_t>(srcY), originalHeight - 1);
-            const size_t xH = std::clamp(xL + 1, size_t(0), originalWidth - 1);
-            const size_t yH = std::clamp(yL + 1, size_t(0), originalHeight - 1);
+      const auto lowerX = static_cast<size_t>(std::floor(srcX));
+      const auto lowerY = static_cast<size_t>(std::floor(srcY));
+      const auto upperX = std::min(lowerX + 1, originalWidth - 1);
+      const auto upperY = std::min(lowerY + 1, originalHeight - 1);
 
-            // Create a SourceCoordinates instance
-            SourceCoordinates coords = {srcX, srcY, xL, yL};
+      // Calculate weights based on source coordinates
+      auto [xWeight, yWeight] = calculateWeights(srcX, srcY, lowerX, lowerY);
 
-            // Calculate interpolation weights
-            auto [xWeight, yWeight] = calculateWeights(coords);
+      const Pixel& topLeft = image[lowerY][lowerX];
+      const Pixel& topRight = image[lowerY][upperX];
+      const Pixel& bottomLeft = image[upperY][lowerX];
+      const Pixel& bottomRight = image[upperY][upperX];
 
-            // Get the four neighboring pixels
-            const Pixel& topLeft = image[yL][xL];
-            const Pixel& topRight = image[yL][xH];
-            const Pixel& bottomLeft = image[yH][xL];
-            const Pixel& bottomRight = image[yH][xH];
-
-            // Interpolate the pixel
-            resizedImage[y][x] = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, xWeight, yWeight);
-        }
+      resizedImage[rowIndex][colIndex] = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, xWeight, yWeight);
     }
+  }
 
-    return resizedImage;
+  return resizedImage;
 }
