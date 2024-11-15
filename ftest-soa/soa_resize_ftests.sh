@@ -10,7 +10,6 @@ resize_and_compare_soa() {
     local output="../output-soa/resize/$2.ppm"
     local expected_width=$3
     local expected_height=$4
-
     echo "Ejecutando resize para: $input con tamaño esperado: ${expected_width}x${expected_height}"
 
     # Ejecutar la operación resize SOA y capturar la salida
