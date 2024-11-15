@@ -99,7 +99,7 @@ struct ImageSOA {
     ImageSOA() = default;
 
     // Constructor para inicializar width y height
-    ImageSOA(int w, int h) : width(w), height(h) {} // NOLINT(*-easily-swappable-parameters)
+    ImageSOA(int w, int h) : width(w), height(h) {} // NOLINT(*-easily-swappable-parameters, *-identifier-length)
 };
 
 
