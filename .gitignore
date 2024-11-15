@@ -13,6 +13,7 @@ in/
 /output-soa/
 /output/
 /input/
+/expected-output/
 
 # Ignorar archivos de salida generados por CMake o Make
 Makefile

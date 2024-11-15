@@ -12,7 +12,7 @@ constexpr uint16_t MAX_COLOR_8BIT = 255;
 constexpr uint16_t MID_COLOR_VALUE_8BIT = 128;
 constexpr uint16_t LOW_COLOR_VALUE_8BIT = 64;
 
-// COMPRESS
+/********************************************* COMPRESS AOS *********************************************/
 // Caso de prueba para `buildColorIndex()`
 TEST(ImageSoATest, BuildColorIndex) {
     ColorChannels channels(TEST_SIZE);
@@ -104,7 +104,7 @@ TEST(ImageSoATest, AppendColorTableSoA) {
     colorTable.getBlueChannel() = {MID_COLOR_VALUE_8BIT, LOW_COLOR_VALUE_8BIT};
 
     std::vector<uint8_t> compressedData;
-    PPMHeader const header{2, 2, MAX_COLOR_8BIT};
+    constexpr PPMHeader header{2, 2, MAX_COLOR_8BIT};
     appendColorTableSoA(compressedData, colorTable, header);
 
     ASSERT_EQ(compressedData.size(), 6);
@@ -137,8 +137,78 @@ TEST(ImageSoATest, AppendPixelIndicesSoA) {
     EXPECT_EQ(compressedData[2], 1);
     EXPECT_EQ(compressedData[3], 0);
 }
+/********************************************************************************************************/
+
+/********************************************* CUTFREQ SOA *********************************************/
+// Prueba para readImageAndStoreChannels
+TEST(KDTreeTests, TestReadImageAndStoreChannels) {
+    const std::string inputFile = "../in/lake-large.ppm";
+    ColorChannels colorChannels(100);
+    std::unordered_map<uint32_t, int, HashColor> colorFrequency;
+
+    readImageAndStoreChannels(inputFile, colorChannels, colorFrequency);
+
+    ASSERT_GT(colorChannels.size(), 0);
+    ASSERT_GT(colorFrequency.size(), 0);
+}
+
+// Prueba para encontrar_colores_menos_frecuentes_2
+TEST(KDTreeTests, TestEncontrarColoresMenosFrecuentes2) {
+    std::unordered_map<uint32_t, int, HashColor> colorFrequency;
+    colorFrequency[0x123456] = 10;
+    colorFrequency[0x654321] = 5;
+    colorFrequency[0xABCDEF] = 1;
+
+    auto coloresMenosFrecuentes = encontrar_colores_menos_frecuentes_2(colorFrequency, 2);
+
+    ASSERT_EQ(coloresMenosFrecuentes.size(), 2);
+    EXPECT_TRUE(coloresMenosFrecuentes.find(std::make_tuple(0xAB, 0xCD, 0xEF)) != coloresMenosFrecuentes.end());
+    EXPECT_TRUE(coloresMenosFrecuentes.find(std::make_tuple(0x65, 0x43, 0x21)) != coloresMenosFrecuentes.end());
+}
+
+// Prueba para construirKDTree
+TEST(KDTreeTests, TestConstruirKDTree) {
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> colors = {
+        {10, 20, 30}, {40, 50, 60}, {70, 80, 90}
+    };
+
+    auto kdTreeRoot = construirKDTree(colors, 0);
+
+    ASSERT_NE(kdTreeRoot, nullptr);
+    EXPECT_EQ(kdTreeRoot->color, std::make_tuple(40, 50, 60));
+}
+
+// Prueba para buscarVecinoMasCercanoOptimizado
+TEST(KDTreeTests, TestBuscarVecinoMasCercanoOptimizado) {
+    std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> colors = {
+        {10, 20, 30}, {40, 50, 60}, {70, 80, 90}
+    };
+    auto kdTreeRoot = construirKDTree(colors, 0);
+    BusquedaVecino busqueda({15, 25, 35});
+
+    buscarVecinoMasCercanoOptimizado(kdTreeRoot.get(), busqueda, 0);
+
+    EXPECT_EQ(busqueda.mejorColor, std::make_tuple(10, 20, 30));
+}
+
+// Prueba para sustituirColoresEnImagen
+TEST(KDTreeTests, TestSustituirColoresEnImagen) {
+    ColorChannels colorChannels(3);
+    colorChannels.getRedChannel() = {10, 40, 70};
+    colorChannels.getGreenChannel() = {20, 50, 80};
+    colorChannels.getBlueChannel() = {30, 60, 90};
+
+    std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> replacementMap;
+    replacementMap[{10, 20, 30}] = {40, 50, 60};
+
+    sustituirColoresEnImagen(colorChannels, replacementMap);
+
+    EXPECT_EQ(colorChannels.getRedChannel()[0], 40);
+    EXPECT_EQ(colorChannels.getGreenChannel()[0], 50);
+    EXPECT_EQ(colorChannels.getBlueChannel()[0], 60);
+}
+/********************************************************************************************************/
 
 // TODO
 // MAX LEVEL
 // ARGS RESIZE
-// ARGS CUTFREQ

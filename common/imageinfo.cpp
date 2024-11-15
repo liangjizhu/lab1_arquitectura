@@ -86,8 +86,11 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
         throw std::runtime_error("Error: Unable to open file " + filename);
     }
 
-    std::string format;
-    int width, height, maxColorValue;
+  std::string format;
+  int width = 0;
+  int height = 0;
+  int maxColorValue = 0;
+
 
     // Read the format identifier
     file >> format;
@@ -98,7 +101,7 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
 
     // Read width, height, and max color value
     file >> width >> height >> maxColorValue;
-    std::cout << "Width: " << width << ", Height: " << height << ", Max Color Value: " << maxColorValue << std::endl;
+    std::cout << "Width: " << width << ", Height: " << height << ", Max Color Value: " << maxColorValue << '\n';
 
     if (width <= 0 || height <= 0 || maxColorValue != 255) {
         throw std::runtime_error("Error: Dimensiones o valor máximo de color no válidos.");
@@ -109,3 +112,4 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
 
     return {width, height};
 }
+

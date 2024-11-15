@@ -1,5 +1,6 @@
 #include "imgaos/imageaos.hpp"
 #include "common/imageinfo.hpp"
+#include "common/interpolation.hpp"
 #include "imgaos/color.hpp"
 #include <gtest/gtest.h>
 #include <vector>
@@ -10,7 +11,7 @@
 // Constantes descriptivas
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;  // Valor máximo para un color de 8 bits
 
-// COMPRESS
+/********************************************* COMPRESS AOS *********************************************/
 // Caso de prueba para `extractImagePixels`
 TEST(ImageAosTest, ExtractImagePixels_8Bit) {
     constexpr PPMHeader header{2, 2, MAX_COLOR_VALUE_8BIT};
@@ -130,7 +131,195 @@ TEST(ImageAosTest, CompressAoS) {
     int const removeOutput = std::remove(outputFilename.c_str());
     EXPECT_EQ(removeOutput, 0);
 }
+/********************************************************************************************************/
+
+/********************************************* CUTFREQ AOS *********************************************/
+// Prueba para `encontrar_colores_menos_frecuentes`
+TEST(CutFreqTests, TestMenosFrecuentes) {
+    std::unordered_map<Color, int, HashColor> colorFrequency;
+    colorFrequency[Color(RGBColor{10, 20, 30})] = 5; // NOLINT(*-avoid-magic-numbers)
+    colorFrequency[Color(RGBColor{40, 50, 60})] = 10; // NOLINT(*-avoid-magic-numbers)
+    colorFrequency[Color(RGBColor{70, 80, 90})] = 1; // NOLINT(*-avoid-magic-numbers)
+
+    auto menosFrecuentes = encontrar_colores_menos_frecuentes(colorFrequency, 2);
+
+    ASSERT_EQ(menosFrecuentes.size(), 2);
+    EXPECT_EQ(menosFrecuentes[0], Color(RGBColor{70, 80, 90}));
+    EXPECT_EQ(menosFrecuentes[1], Color(RGBColor{10, 20, 30}));
+}
+
+// Prueba para `construirKDTree`
+TEST(CutFreqTests, TestConstruirKDTree) {
+    std::vector<Color> colores = {
+        Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
+    };
+
+    auto kdTreeRoot = construirKDTree(colores, 0);
+
+    ASSERT_NE(kdTreeRoot, nullptr);
+    EXPECT_EQ(kdTreeRoot->color, Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(kdTreeRoot->left->color, Color(RGBColor{10, 20, 30}));
+    EXPECT_EQ(kdTreeRoot->right->color, Color(RGBColor{70, 80, 90}));
+}
+
+// Prueba para `buscarVecinoMasCercano`
+TEST(CutFreqTests, TestBuscarVecinoMasCercano) {
+    std::vector<Color> colores = {
+        Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
+    };
+    auto kdTreeRoot = construirKDTree(colores, 0);
+    Color const target(RGBColor{15, 25, 35});
+
+    auto [mejorColor, distancia] = buscarVecinoMasCercano(kdTreeRoot, target, 0);
+
+    EXPECT_EQ(mejorColor, Color(RGBColor{10, 20, 30}));
+}
+
+// Prueba para `substituteColors`
+TEST(CutFreqTests, TestSubstituteColors) {
+    std::vector<Color> pixels = {
+        Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{10, 20, 30}) // NOLINT(*-avoid-magic-numbers)
+    };
+    std::vector<Color> const menosFrecuentes = {Color(RGBColor{10, 20, 30})};
+
+    std::vector<Color> remainingColors = {
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
+    };
+    auto kdTreeRoot = construirKDTree(remainingColors, 0);
+
+    substituteColors(pixels, menosFrecuentes, kdTreeRoot);
+
+    EXPECT_EQ(pixels[0], Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(pixels[1], Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(pixels[2], Color(RGBColor{70, 80, 90}));
+    EXPECT_EQ(pixels[3], Color(RGBColor{40, 50, 60}));
+}
+
+TEST(CutFreqTests, TestPrepareRemainingColors) {
+    ImageData data;
+    data.colorCount.resize(256 * 256 * 256, 0); // Inicializar el tamaño para colores de 8 bits NOLINT(*-implicit-widening-of-multiplication-result)
+
+    data.uniqueColors = {
+      Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+      Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+      Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
+    };
+    std::vector<Color> const menosFrecuentes = {Color(RGBColor{10, 20, 30})};
+
+    auto remainingColors = prepareRemainingColors(data, menosFrecuentes);
+
+    ASSERT_EQ(remainingColors.size(), 2);
+    EXPECT_EQ(remainingColors[0], Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(remainingColors[1], Color(RGBColor{70, 80, 90}));
+}
+/********************************************************************************************************/
+
 // TODO
 // MAX LEVEL
 // ARGS RESIZE
+TEST(VectorToImageTest, ConvertsDataToImageSuccessfully) {
+    // Sample 3x3 image data, RGB channels
+    std::vector<uint8_t> data = {255, 0, 0, 0, 255, 0, 0, 0, 255,
+                                 255, 255, 0, 0, 255, 255, 255, 0, 255,
+                                 100, 150, 200, 50, 25, 75, 125, 175, 50};
+    int width = 3;
+    int height = 3;
+    int channels = 3;
+
+    Image image = vectorToImage(data, width, height, channels);
+
+    // Check if dimensions match
+    ASSERT_EQ(image.size(), height);
+    ASSERT_EQ(image[0].size(), width);
+
+    // Check specific pixel values
+    EXPECT_EQ(image[0][0].r, 255);
+    EXPECT_EQ(image[0][1].g, 255);
+    EXPECT_EQ(image[2][2].b, 50);
+}
+
+TEST(ImageToVectorTest, ConvertsImageToVectorSuccessfully) {
+    // Create a 2x2 image
+    Image image = {
+        {{255, 0, 0}, {0, 255, 0}},
+        {{0, 0, 255}, {100, 150, 200}}
+    };
+    int channels = 3;
+
+    std::vector<uint8_t> data = imageToVector(image, channels);
+
+    // Expected flat data representation
+    std::vector<uint8_t> expectedData = {255, 0, 0, 0, 255, 0, 0, 0, 255, 100, 150, 200};
+    ASSERT_EQ(data, expectedData);
+}
+
+TEST(ResizeImageAoSTest, ResizesImageDownscalingSuccessfully) {
+    // Create a simple 3x3 image
+      Image image = {
+          {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}},
+          {{255, 255, 0}, {0, 255, 255}, {255, 0, 255}},
+          {{100, 150, 200}, {50, 25, 75}, {125, 175, 50}}
+      };
+    int newWidth = 2;
+    int newHeight = 2;
+
+    Image resizedImage = resizeImageAoS(image, newWidth, newHeight);
+
+    // Check if dimensions match
+    ASSERT_EQ(resizedImage.size(), newHeight);
+    ASSERT_EQ(resizedImage[0].size(), newWidth);
+
+    // Verify expected pixel values through interpolation
+    EXPECT_EQ(resizedImage[0][0].r, interpolateChannel(255, 255, 255, 255, 0, 0)); // Should expect 152
+
+}
+
+TEST(ResizeImageAoSTest, ResizesImageUpscalingSuccessfully) {
+    // Create a simple 2x2 image
+    Image image = {
+        {{255, 0, 0}, {0, 255, 0}},
+        {{0, 0, 255}, {100, 150, 200}}
+    };
+    int newWidth = 3;
+    int newHeight = 3;
+
+    Image resizedImage = resizeImageAoS(image, newWidth, newHeight);
+
+    // Check if dimensions match
+    ASSERT_EQ(resizedImage.size(), newHeight);
+    ASSERT_EQ(resizedImage[0].size(), newWidth);
+
+    // Check that center pixel is an interpolated blend of the original corners
+    EXPECT_EQ(resizedImage[1][1].r, interpolateChannel(255, 0, 0, 100, 0.5, 0.5));
+    EXPECT_EQ(resizedImage[1][1].g, interpolateChannel(0, 255, 0, 150, 0.5, 0.5));
+    EXPECT_EQ(resizedImage[1][1].b, interpolateChannel(0, 0, 255, 200, 0.5, 0.5));
+}
+
+TEST(InterpolatePixelTest, InterpolatesColorsCorrectly) {
+    Pixel topLeft = {255, 0, 0};
+    Pixel topRight = {0, 255, 0};
+    Pixel bottomLeft = {0, 0, 255};
+    Pixel bottomRight = {100, 150, 200};
+
+    Pixel interpolated = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, 0.5, 0.5);
+
+    // Verify interpolated values for each channel
+    EXPECT_EQ(interpolated.r, interpolateChannel(255, 0, 0, 100, 0.5, 0.5));
+    EXPECT_EQ(interpolated.g, interpolateChannel(0, 255, 0, 150, 0.5, 0.5));
+    EXPECT_EQ(interpolated.b, interpolateChannel(0, 0, 255, 200, 0.5, 0.5));
+}
+
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
 // ARGS CUTFREQ

@@ -138,12 +138,15 @@ void writePPM(const std::string& filename, const std::vector<uint8_t>& pixelData
   file << "P6\n" << width << " " << height << "\n255\n";
 
   // Convert pixelData to a std::vector<char> for writing
-  std::vector<char> pixelDataChar(pixelData.begin(), pixelData.end());
+  const std::vector<char> pixelDataChar(pixelData.begin(), pixelData.end());
 
   // Write the pixel data as binary
-  file.write(pixelDataChar.data(), static_cast<std::streamsize>(pixelDataChar.size()));
+  std::vector<char> charData(pixelData.begin(), pixelData.end());
+  file.write(charData.data(), static_cast<std::streamsize>(charData.size()));
+
 
   if (!file) {
     throw std::runtime_error("Error: Failed to write to file " + filename);
   }
 }
+

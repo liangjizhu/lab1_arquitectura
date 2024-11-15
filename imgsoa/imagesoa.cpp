@@ -11,19 +11,6 @@
 #include <string>
 #include <algorithm>
 #include <numeric>
-#include "imagesoa.hpp"
-#include "binaryio.hpp"
-#include "imageinfo.hpp"
-#include "color.hpp"
-#include "progargs.hpp"
-
-#include <vector>
-#include <unordered_map>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <algorithm>
-#include <numeric>
 #include <tuple>
 
 #include <unordered_set>
@@ -37,6 +24,10 @@ constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
+
+constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
+constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
+constexpr int MASK = 0xFF;
 
 /********************************************* COMPRESS SOA *********************************************/
 // Crea un índice de colores único a partir de los canales de color
@@ -133,7 +124,6 @@ createColorTableSoA(const ColorChannels& channels) {
 void appendColorTableSoA(std::vector<uint8_t>& compressedData, const ColorChannels& colorTable, const PPMHeader& header) {
     colorTable.writeToBinary(compressedData, header);
 }
-
 
 // Añadir índices de píxeles al archivo comprimido
 void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
@@ -241,12 +231,12 @@ namespace {
 
 }  // namespace
 
-bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputFile, int newWidth, int newHeight) {
+  bool resizeAndSaveImage(const FilePaths& filePaths, int newWidth, int newHeight) {
   PPMHeader header{};
   std::vector<uint8_t> data;
 
   // Step 1: Read the image data
-  if (!readImageData(inputFile, header, data)) {
+  if (!readImageData(filePaths.inputFile, header, data)) {
     return false;
   }
 
@@ -260,7 +250,7 @@ bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputF
   const std::vector<uint8_t> resizedData = convertToFlatData(resizedImage, newWidth, newHeight);
 
   // Step 5: Write resized image to output file
-  return writeImageData(outputFile, resizedData, newWidth, newHeight);
+  return writeImageData(filePaths.outputFile, resizedData, newWidth, newHeight);
 }
 
 }  // namespace imgsoa
@@ -292,44 +282,46 @@ namespace {
     return {xLeft, yLeft, xRight, yRight, xWeight, yWeight};
   }
 
-  namespace {
+    namespace {
 
-    // Inline helper for horizontal interpolation
-    inline float interpolateHorizontal(float left, float right, float weight) {
-      return (left * (1.0F - weight)) + (right * weight);
-    }
+      // Inline helper for horizontal interpolation
+      inline float interpolateHorizontal(float left, float right, float weight) {
+        return (left * (1.0F - weight)) + (right * weight);
+      }
 
-    // Inline helper to load and cast a pixel value to float
-    inline float getPixelValue(const std::vector<uint8_t>& channel, size_t imageWidth, size_t xCoord, size_t yCoord) {
-      return static_cast<float>(channel[(yCoord * imageWidth) + xCoord]);
-    }
+      // Inline helper to load and cast a pixel value to float
+      inline float getPixelValue(const std::vector<uint8_t>& channel, size_t imageWidth, size_t xCoord, size_t yCoord) {
+        return static_cast<float>(channel[(yCoord * imageWidth) + xCoord]);
+      }
 
 
-    // Inline helper for final bilinear interpolation combining horizontal and vertical
-    inline uint8_t interpolateBilinear(float topInterpolation, float bottomInterpolation, float weight) {
-      return static_cast<uint8_t>((topInterpolation * (1.0F - weight)) + (bottomInterpolation * weight));
-    }
+      // Inline helper for final bilinear interpolation combining horizontal and vertical
+      inline uint8_t interpolateBilinear(float topInterpolation, float bottomInterpolation, float weight) {
+        return static_cast<uint8_t>((topInterpolation * (1.0F - weight)) + (bottomInterpolation * weight));
+      }
 
-    // Main function for bilinear interpolation on a single channel
-    uint8_t bilinearInterpolateChannel(
-        const std::vector<uint8_t>& channel, size_t imageWidth,
-        size_t xLow, size_t yLow, size_t xHigh, size_t yHigh, float xWeight, float yWeight) {
+      // Main function for bilinear interpolation on a single channel
+      float interpolateRow(
+      const std::vector<uint8_t>& channel, size_t imageWidth, size_t x1, size_t x2, size_t y, float weight) {
+        const float left = getPixelValue(channel, imageWidth, x1, y);
+        const float right = getPixelValue(channel, imageWidth, x2, y);
+        return interpolateHorizontal(left, right, weight);
+      }
 
-      // Load pixel values using helper function
-      const float topLeft = getPixelValue(channel, imageWidth, xLow, yLow);
-      const float topRight = getPixelValue(channel, imageWidth, xHigh, yLow);
-      const float bottomLeft = getPixelValue(channel, imageWidth, xLow, yHigh);
-      const float bottomRight = getPixelValue(channel, imageWidth, xHigh, yHigh);
+      uint8_t bilinearInterpolateChannel(
+          const std::vector<uint8_t>& channel, size_t imageWidth,
+          size_t xLow, size_t yLow, size_t xHigh, size_t yHigh, float xWeight, float yWeight) {
 
-      // Perform horizontal interpolations
-      const float topInterpolation = interpolateHorizontal(topLeft, topRight, xWeight);
-      const float bottomInterpolation = interpolateHorizontal(bottomLeft, bottomRight, xWeight);
+        // Interpolate the top and bottom rows
+        const float topInterpolation = interpolateRow(channel, imageWidth, xLow, xHigh, yLow, xWeight);
+        const float bottomInterpolation = interpolateRow(channel, imageWidth, xLow, xHigh, yHigh, xWeight);
 
-      // Perform final bilinear interpolation with vertical component
-      return interpolateBilinear(topInterpolation, bottomInterpolation, yWeight);
-    }
+        // Perform vertical interpolation between the two rows
+        return interpolateBilinear(topInterpolation, bottomInterpolation, yWeight);
+      }
 
-  } // end of anonymous namespace
+
+    } // end of anonymous namespace
 
 
 
@@ -395,8 +387,7 @@ ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
 
 
 
-//************PRUEBAS CON ÁBOLES*************/
-
+/********************************************* CUTFREQ SOA *********************************************/
 //NOLINTBEGIN(misc-no-recursion)
 void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency) {
     PPMHeader header{};
@@ -471,9 +462,6 @@ std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontra
     return colores_menos_frecuentes;
 }
 
-constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
-constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
-constexpr int MASK = 0xFF;
 
 void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& replacementMap) {
     // Crear un mapa de búsqueda más eficiente usando un único entero como clave
@@ -517,14 +505,7 @@ void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered
     }
 }
 
-struct KDNode {
-    std::tuple<uint16_t, uint16_t, uint16_t> color;
-    std::unique_ptr<KDNode> left = nullptr;
-    std::unique_ptr<KDNode> right = nullptr;
 
-    KDNode(const std::tuple<uint16_t, uint16_t, uint16_t>& color)
-        : color(color) {}
-};
 
 // Construcción balanceada del árbol KD
 std::unique_ptr<KDNode> construirKDTree(std::vector<std::tuple<uint16_t, uint16_t, uint16_t>>& colors, int depth = 0) {
@@ -565,16 +546,6 @@ double calcularDistanciaCuadrada(const std::tuple<uint16_t, uint16_t, uint16_t>&
            std::pow(std::get<1>(color1) - std::get<1>(color2), 2) +
            std::pow(std::get<2>(color1) - std::get<2>(color2), 2);
 }
-
-
-struct BusquedaVecino {
-    std::tuple<uint16_t, uint16_t, uint16_t> color;  // El color que estamos buscando
-    double minDistanciaCuadrada;                     // La distancia mínima encontrada hasta ahora
-    std::tuple<uint16_t, uint16_t, uint16_t> mejorColor;  // El mejor color encontrado hasta ahora
-
-    BusquedaVecino(const std::tuple<uint16_t, uint16_t, uint16_t>& col)
-        : color(col), minDistanciaCuadrada(std::numeric_limits<double>::infinity()) {}
-};
 
 void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, int depth = 0) {
     if (root == nullptr){
@@ -617,7 +588,6 @@ void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, in
     }
 }
 
-
 void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
     std::ofstream outFile(outputFile, std::ios::binary);
     if (!outFile.is_open()) {
@@ -657,12 +627,6 @@ void writePPM(const std::string& outputFile, const PPMHeader& header, const Colo
     outFile.flush();
     std::cout << "Imagen procesada escrita en: " << outputFile << '\n';
 }
-
-// Definir constantes para los desplazamientos y la máscara
-/*constexpr int SHIFT_RED = 16;
-constexpr int SHIFT_GREEN = 8;
-constexpr int MASK = 0xFF;*/
-
 
 std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrarColoresReemplazo(
     const std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& colorsToRemoveSet,
@@ -707,8 +671,6 @@ std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t
     return replacementMap; // Devolvemos el mapa de reemplazo de colores.
 }
 
-
-
 void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
     PPMHeader header{};
     if (!readPPMHeader(inputFile, header)) {
@@ -749,6 +711,6 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     readImageAndStoreChannels(outputFile, colorChannels2, colorFrequency2);
     std::cout << "Colores únicos al final: " << colorFrequency2.size() << '\n';
 }
-
-//se quedó pillado el push
 //NOLINTEND(misc-no-recursion)
+/********************************************************************************************************/
+
