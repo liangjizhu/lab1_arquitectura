@@ -44,7 +44,9 @@ void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
                            const ColorChannels& channels,
                            const std::unordered_map<std::string, int>& colorIndex);
 /********************************************************************************************************/
-
+/********************************************* MAX LEVEL SOA *********************************************/
+void modifyMaxLevelInputChannels(ColorChannels imageChannels, std::vector<uint8_t>& outputBytes, PPMHeader header, uint32_t antiguoNivel);
+void processMaxLevel(const FilePaths& paths, uint16_t maxLevel);
 /********************************************* CUTFREQ SOA *********************************************/
 
 void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency);

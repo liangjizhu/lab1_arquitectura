@@ -221,9 +221,21 @@ TEST(CutFreqTests, TestPrepareRemainingColors) {
 }
 /********************************************************************************************************/
 
-// TODO
-// MAX LEVEL
-// ARGS RESIZE
+/********************************************* MAXLEVEL AOS *********************************************/
+//TEST(MaxLevelTests, TestCambioDeNivel) {
+    //std::vector<Color> colores;
+    //colores.push_back(Color(RGBColor{17, 12, 7})); // NOLINT(*-avoid-magic-numbers)
+    //constexpr PPMHeader header{2, 2, MAX_COLOR_VALUE_8BIT};
+    //std::vector<Color> result = modifyMaxLevelInputPixels(colores, header.maxColorValue, static_cast<uint16_t>(100));
+    //std::vector<Color> target;
+    //target.push_back(Color(RGBColor{5, 4, 2}));
+    //EXPECT_EQ(result, target);
+//}
+
+/********************************************************************************************************/
+
+/********************************************* CUTFREQ AOS *********************************************/
+
 #include <gtest/gtest.h>
 
 TEST(VectorToImageTest, ConvertsDataToImageSuccessfully) {
