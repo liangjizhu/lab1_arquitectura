@@ -11,19 +11,6 @@
 #include <string>
 #include <algorithm>
 #include <numeric>
-#include "imagesoa.hpp"
-#include "binaryio.hpp"
-#include "imageinfo.hpp"
-#include "color.hpp"
-#include "progargs.hpp"
-
-#include <vector>
-#include <unordered_map>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <algorithm>
-#include <numeric>
 #include <tuple>
 
 #include <unordered_set>
