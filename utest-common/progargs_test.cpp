@@ -50,7 +50,7 @@ TEST(ProgramArgsTest, GetFilePaths) {
 
 // Caso de prueba para operación no soportada en getFilePaths
 TEST(ProgramArgsTest, GetFilePaths_NoValue) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "input.ppm", "info"};
+    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "in.ppm", "info"};
     ProgramArgs const progArgs(args);
     EXPECT_TRUE(progArgs.validate());
     EXPECT_FALSE(progArgs.getFilePaths().has_value());

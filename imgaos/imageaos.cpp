@@ -313,11 +313,11 @@ Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
       const float origX = static_cast<float>(colIndex) * scaleRatios.xRatio;
       const float origY = static_cast<float>(rowIndex) * scaleRatios.yRatio;
 
-      // Determine nearest neighbor pixels
       auto lowerX = static_cast<size_t>(std::floor(origX));
       auto lowerY = static_cast<size_t>(std::floor(origY));
       auto upperX = std::min(lowerX + 1, originalWidth - 1);
       auto upperY = std::min(lowerY + 1, originalHeight - 1);
+
 
       // Prepare params for pixel interpolation
       const InterpolationPixelParams params = {

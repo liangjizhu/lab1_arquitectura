@@ -52,7 +52,7 @@ int handleResize(const ProgramArgs& args) {
   const int height = args.getResizeHeight();
   std::cout << "Resizing to " << width << "x" << height << '\n';
 
-  // Create FilePaths struct that holds input and output file paths
+  // Create FilePaths struct that holds in and output file paths
     imgsoa::FilePaths filePaths{
     args.getInputFile(),  // inputFile path
     args.getOutputFile()  // outputFile path

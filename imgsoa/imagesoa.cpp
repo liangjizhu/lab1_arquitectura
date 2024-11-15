@@ -393,10 +393,6 @@ uint8_t bilinearInterpolateChannel(const BilinearInterpolationParams& params) {
 }
 
 
-
-
-
-
 } // end of anonymous namespace
 
 
@@ -483,9 +479,6 @@ uint8_t bilinearInterpolateChannel(const BilinearInterpolationParams& params) {
 
     return resizedImage;
 }
-
-
-
 
 
 /********************************************* CUTFREQ SOA *********************************************/
