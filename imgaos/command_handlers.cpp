@@ -4,7 +4,7 @@
 #include "imageaos.hpp"
 #include <iostream>
 #include <chrono>
-
+void processCutfreq(const std::string& inputFile, int frequency, const std::string& outputFile);
 // Función para manejar el comando 'info'
 int handleInfo(const ProgramArgs& args) {
     if (!args.validateInfo()) {
@@ -72,12 +72,15 @@ int handleCutFreq(const ProgramArgs& args) {
     }
     int const frequency = args.getCutFreq();
     std::cout << "Cutting frequency to: " << frequency << '\n';
+    processCutfreq(args.getInputFile(), frequency, args.getOutputFile());
+
+    // Aquí iría la lógica para ajustar la frecuencia del archivo
     return 0;
 }
 
 // Función para manejar el comando 'compress'
 int handleCompress(const ProgramArgs& args) {
-    if (!args.validateCompress()) {
+    if (!args.validate()) {
         std::cerr << args.getErrorMessage() << '\n';
         return -1;
     }

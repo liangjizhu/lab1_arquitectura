@@ -25,20 +25,8 @@
 #include <algorithm>
 #include <numeric>
 #include <tuple>
-#include "imagesoa.hpp"
-#include "binaryio.hpp"
-#include "imageinfo.hpp"
-#include "color.hpp"
-#include "progargs.hpp"
-#include <vector>
-#include <unordered_map>
+
 #include <unordered_set>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <algorithm>
-#include <numeric>
-#include <tuple>
 #include <limits>
 #include <cmath>
 #include <memory>
@@ -50,18 +38,21 @@ constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 
-// Crear índice de colores
+/********************************************* COMPRESS SOA *********************************************/
+// Crea un índice de colores único a partir de los canales de color
 std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable) {
+
     std::unordered_map<std::string, int> colorIndex;
     colorIndex.reserve(COLOR_TABLE_RESERVE_SIZE);
 
     size_t tableIndex = 0;
 
     for (size_t i = 0; i < channels.size(); ++i) {
+        // Genera una clave de color como cadena ("R, G, B") para cada píxel
         std::string const colorKey = std::to_string(channels.getRedChannel()[i]) + "," +
                                      std::to_string(channels.getGreenChannel()[i]) + "," +
                                      std::to_string(channels.getBlueChannel()[i]);
-
+        // Si el color es nuevo (no está en el índice), lo agrega a la colorTable
         auto [it, inserted] = colorIndex.emplace(colorKey, static_cast<int>(tableIndex));
         if (inserted) {
             colorTable.getRedChannel().push_back(channels.getRedChannel()[i]);
@@ -74,11 +65,17 @@ std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channe
     return colorIndex;
 }
 
-// Ordenar la tabla de colores en orden lexicográfico RGB
+// Ordenar la tabla de colores en orden RGB
 std::vector<size_t> sortColorTable(ColorChannels& colorTable) {
     std::vector<size_t> indices(colorTable.getRedChannel().size());
     std::iota(indices.begin(), indices.end(), 0);
-
+    // std::ranges::sort -> ordenar contenedores con una sintaxis más concisa y segura
+    // Lambda [&colorTable](size_t indexA, size_t indexB) -> [&colorTable] captura la referencia a colorTable, permitiendo acceder a sus metodos
+    // std::tie crea una tupla temporal con los valores (R, G, B) del color en la posición indexA y lo compara con la tupla del color en indexB
+    // (R1, G1, B1) < (R2, G2, B2) si:
+    // - R1 < R2
+    // - o si R1 == R2 y G1 < G2
+    // - o si R1 == R2 y G1 == G2 y B1 < B2
     std::ranges::sort(indices.begin(), indices.end(), [&colorTable](size_t indexA, size_t indexB) {
         return std::tie(colorTable.getRedChannel()[indexA], colorTable.getGreenChannel()[indexA], colorTable.getBlueChannel()[indexA]) <
                std::tie(colorTable.getRedChannel()[indexB], colorTable.getGreenChannel()[indexB], colorTable.getBlueChannel()[indexB]);
@@ -87,7 +84,7 @@ std::vector<size_t> sortColorTable(ColorChannels& colorTable) {
     return indices;
 }
 
-// Crear tabla de colores ordenada
+// Crea una nueva tabla de colores (sortedColorTable) siguiendo el orden de los índices proporcionados
 ColorChannels createSortedColorTable(const ColorChannels& colorTable, const std::vector<size_t>& indices) {
     ColorChannels sortedColorTable(colorTable.size());
 
@@ -115,9 +112,10 @@ std::unordered_map<std::string, int> rebuildColorIndex(const ColorChannels& sort
     return colorIndex;
 }
 
-// Crear tabla de colores y mapa de índices (SoA)
+// Función principal para crear la tabla de colores
 std::tuple<ColorChannels, std::unordered_map<std::string, int>>
 createColorTableSoA(const ColorChannels& channels) {
+    // Crear la tabla de colores y el índice
     ColorChannels colorTable(channels.size());
     auto colorIndex = buildColorIndex(channels, colorTable);
 
@@ -155,14 +153,15 @@ void appendPixelIndicesSoA(std::vector<uint8_t>& compressedData,
 
 // Función principal de compresión SoA
 void compressSoA(const FilePaths& paths){
+    // Asegurarse de que la extensión del archivo de salida sea .cppm
     std::string const outputFile = ensureCppmExtension(paths.outputFile);
-
+    // Leer los datos binarios del archivo de entrada
     const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
     if (fileData.empty()) {
       std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << paths.inputFile << '\n';
       return;
     }
-
+    // Leer el encabezado del archivo PPM
     PPMHeader header{};
     if (!readPPMHeader(paths.inputFile, header)) {
       std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
@@ -186,6 +185,7 @@ void compressSoA(const FilePaths& paths){
     // Escribir el archivo comprimido
     BinaryIO::writeBinaryFile(outputFile, compressedData);
 }
+/********************************************************************************************************/
 
 namespace imgsoa {
 
@@ -393,8 +393,11 @@ ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
     return resizedImage;
 }
 
+
+
 //************PRUEBAS CON ÁBOLES*************/
 
+//NOLINTBEGIN(misc-no-recursion)
 void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency) {
     PPMHeader header{};
     if (!readPPMHeader(inputFile, header)) {
@@ -431,7 +434,6 @@ void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colo
 
 std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrar_colores_menos_frecuentes_2(
     const std::unordered_map<uint32_t, int, HashColor>& frecuencia, int n) {
-
     // Vector para almacenar colores con sus frecuencias y ordenar
     std::vector<std::pair<std::tuple<uint16_t, uint16_t, uint16_t>, int>> colores_frecuentes;
     // Convertimos cada color en una tupla RGB y lo almacenamos junto con su frecuencia
@@ -441,12 +443,23 @@ std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontra
         const uint16_t blue = color & 0xFF;
         colores_frecuentes.emplace_back(std::make_tuple(red, green, blue), freq);
     }
-
     // Ordenar el vector por frecuencia en orden ascendente
+      // En caso de empate, ordenar por azul (descendente), luego verde (descendente), y finalmente rojo (descendente)
     std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), [](const auto& colora, const auto& colorb) {
-        return colora.second < colorb.second;
+        if (colora.second != colorb.second) {
+            return colora.second < colorb.second;
+        }
+        // Comparar componentes b, luego g, luego r en orden descendente para los empates
+        const auto& [ra, ga, ba] = colora.first;
+        const auto& [rb, gb, bb] = colorb.first;
+        if (ba != bb) {
+            return ba > bb;
+        }
+        if (ga != gb) {
+            return ga > gb;
+        }
+        return ra > rb;
     });
-
     // Crear un conjunto para los colores menos frecuentes
     std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> colores_menos_frecuentes;
 
@@ -604,6 +617,7 @@ void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, in
     }
 }
 
+
 void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
     std::ofstream outFile(outputFile, std::ios::binary);
     if (!outFile.is_open()) {
@@ -705,6 +719,7 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     ColorChannels colorChannels(totalPixels);
     std::unordered_map<uint32_t, int, HashColor> colorFrequency;
     readImageAndStoreChannels(inputFile, colorChannels, colorFrequency);
+    std::cout << "Colores únicos al principio: " << colorFrequency.size() << '\n';
     auto coloresMenosFrecuentes = encontrar_colores_menos_frecuentes_2(colorFrequency, numColors);
     std::vector<std::tuple<uint16_t, uint16_t, uint16_t>> coloresRestantes;
     for (const auto& [color, _] : colorFrequency) {
@@ -729,4 +744,11 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     }
     sustituirColoresEnImagen(colorChannels, replacementMap);
     writePPM(outputFile, header, colorChannels);
+    ColorChannels colorChannels2(totalPixels);
+    std::unordered_map<uint32_t, int, HashColor> colorFrequency2;
+    readImageAndStoreChannels(outputFile, colorChannels2, colorFrequency2);
+    std::cout << "Colores únicos al final: " << colorFrequency2.size() << '\n';
 }
+
+//se quedó pillado el push
+//NOLINTEND(misc-no-recursion)

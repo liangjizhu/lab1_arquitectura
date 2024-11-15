@@ -37,21 +37,6 @@ TEST(ProgramArgsTest, ValidateInfo_Valid) {
     EXPECT_TRUE(progArgs.validateInfo());
 }
 
-// Caso de prueba para 'compress' con argumentos válidos
-TEST(ProgramArgsTest, ValidateCompress_Valid) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "in/lake-small.ppm", "output-aos/test", "compress"};
-    ProgramArgs const progArgs(args);
-    EXPECT_TRUE(progArgs.validateCompress());
-}
-
-// Caso de prueba para 'compress' con argumentos inválidos
-TEST(ProgramArgsTest, ValidateCompress_Invalid) {
-    std::vector<std::string> const args = {"imtool-aos/imtool-aos", "in/lake-small.ppm", "output-aos/test", "compress", "100"};
-    ProgramArgs const progArgs(args);
-    EXPECT_FALSE(progArgs.validateCompress());
-    EXPECT_EQ(progArgs.getErrorMessage(), "Error: Invalid extra arguments for compress");
-}
-
 // Caso de prueba para obtener rutas de archivos
 TEST(ProgramArgsTest, GetFilePaths) {
     std::vector<std::string> const args = {"imtool-aos/imtool-aos", "in/lake-small.ppm", "output-aos/test", "compress"};

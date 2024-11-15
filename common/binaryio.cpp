@@ -28,6 +28,18 @@ std::vector<uint8_t> BinaryIO::readBinaryFile(const std::string& filename) {
     return buffer;
 }
 
+//QUIERO TERMINAR ESTO
+void BinaryIO::readBinaryFileModified(const std::string& filename) {
+//std::istream BinaryIO::readBinaryFileModified(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    
+    if (!file.is_open()) {
+        throw std::runtime_error("Error: Unable to open file " + filename);
+    }
+
+    //return inputStream;
+}
+
 // Escribe el contenido de un vector de bytes en un archivo binario
 void BinaryIO::writeBinaryFile(const std::string& filename, const std::vector<uint8_t>& data) {
   std::ofstream file(filename, std::ios::binary);

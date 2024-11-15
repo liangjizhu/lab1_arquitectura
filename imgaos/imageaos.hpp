@@ -11,12 +11,23 @@
 
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
 
-// COMPRESS
+/********************************************* COMPRESS AOS *********************************************/
+// Extraer los píxeles de la imagen a partir de los datos binarios (fileData)
 std::vector<Color> extractImagePixels(const std::vector<uint8_t>& fileData, const PPMHeader& header);
+
+// Genera una tabla de colores únicos (colorTable) y un mapa de índices (colorIndex)
 std::pair<std::vector<Color>, std::unordered_map<Color, int>> createColorTable(const std::vector<Color>& imagePixels);
+
+// Añade la tabla de colores al archivo comprimido
 void appendColorTable(std::vector<uint8_t>& compressedData, const std::vector<Color>& colorTable, const PPMHeader& header);
+
+// Añade los índices de los píxeles al archivo comprimido
 void appendPixelIndices(std::vector<uint8_t>& compressedData, const std::vector<Color>& imagePixels, const std::unordered_map<Color, int>& colorIndex);
+
+// Función principal para comprimir una imagen en formato AOS
 void compressAoS(const FilePaths& paths);
+/********************************************************************************************************/
+
 // Otras funciones para 'resize', 'cutfreq', etc.
 // Define Pixel and Image types here
 struct Pixel {

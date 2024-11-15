@@ -16,7 +16,6 @@ bool ProgramArgs::validate() const{
         errorMessage = "Error: Invalid number of arguments";
         return false;
     }
-
     // `info` tiene tres argumentos: nombre del programa, archivo de entrada, y comando.
     if (args[2] == "info") {
         if (args.size() != 3) {
@@ -27,20 +26,16 @@ bool ProgramArgs::validate() const{
         inputFile = args[1];
         return true;
     }
-
     // Las demás operaciones tienen cuatro argumentos: nombre del programa, archivo de entrada, operación y archivo de salida.
     if (args.size() < 4) {
         errorMessage = "Error: Invalid number of arguments";
         return false;
     }
-
     operation = args[3];
-
     // Validar el comando
     if (operation == "maxlevel" || operation == "resize" || operation == "cutfreq" || operation == "compress") {
         inputFile = args[1];
         outputFile = args[2];  // Para las operaciones que requieren archivo de salida
-
         if (operation == "compress" && args.size() != 4) {
             errorMessage = "Error: Invalid arguments for 'compress'";
             return false;
@@ -49,7 +44,6 @@ bool ProgramArgs::validate() const{
     }
         errorMessage = "Error: Invalid operation: " + operation;
         return false;
-
 }
 
 std::string ProgramArgs::getOutputFile() const {
@@ -118,14 +112,6 @@ bool ProgramArgs::validateCutFreq() const{
         }
     } catch (const std::invalid_argument&) {
         errorMessage = "Error: Invalid cutfreq: " + args[3];
-        return false;
-    }
-    return true;
-}
-
-bool ProgramArgs::validateCompress() const{
-    if (args.size() != 4) {  // Verifica que haya cuatro argumentos en total para `compress`
-        errorMessage = "Error: Invalid extra arguments for compress";
         return false;
     }
     return true;

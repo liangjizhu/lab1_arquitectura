@@ -52,17 +52,22 @@ int handleResize(const ProgramArgs& args) {
 
 // Función para manejar el comando 'cutfreq'
 int handleCutFreq(const ProgramArgs& args) {
-    if (!args.validateCutFreq()) {
+  if (!args.validateCutFreq()) {
         std::cerr << args.getErrorMessage() << '\n';
         return -1;
     }
+    int const frequency = args.getCutFreq();
+    std::cout << "Cutting frequency to: " << frequency << '\n';
+    processCutfreq(args.getInputFile(), frequency, args.getOutputFile());
+
+    // Aquí iría la lógica para ajustar la frecuencia del archivo
     return 0;
 }
 
 // Función para manejar el comando 'compress'
 int handleCompress(const ProgramArgs& args) {
     auto paths = args.getFilePaths();
-    if (!args.validateCompress()) {
+    if (!args.validate()) {
         std::cerr << args.getErrorMessage() << '\n';
         return -1;
     }
@@ -75,7 +80,7 @@ int handleCompress(const ProgramArgs& args) {
     auto end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> const duration = end - start;
-    std::cout << "File compressed to " << args.getOutputFile() << std::endl;
-    std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
+    std::cout << "File compressed to " << args.getOutputFile() << '\n';
+    std::cout << "Time taken: " << duration.count() << " seconds" << '\n';
     return 0;
 }
