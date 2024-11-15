@@ -13,3 +13,7 @@
 - Se asume que hay una carpeta llamada output-aos donde se alojan los archivos de salida de las funciones
 - Se asume que hay una carpeta llamada output-soa donde se alojan los archivos de salida de las funciones
 - Se asume que hay una carpeta llamada expected-output donde están las imágenes de salida de referencia
+## Compilación
+- Ha habido una descoordinación en la compilación, debido a que el CMakeLists.txt del root
+    no estaba correctamente configurado.
+- Se ha comentado cierta parte del código con NOLINT para que se pueda realizar el proceso de compilación.

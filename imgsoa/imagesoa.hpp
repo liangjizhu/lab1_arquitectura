@@ -89,12 +89,19 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
 /********************************************************************************************************/
 
 struct ImageSOA {
-  std::vector<uint8_t> redChannel;
-  std::vector<uint8_t> greenChannel;
-  std::vector<uint8_t> blueChannel;
-  int width;
-  int height;
+    std::vector<uint8_t> redChannel;
+    std::vector<uint8_t> greenChannel;
+    std::vector<uint8_t> blueChannel;
+    int width = 0;  // Inicialización por defecto
+    int height = 0; // Inicialización por defecto
+
+    // Constructor por defecto
+    ImageSOA() = default;
+
+    // Constructor para inicializar width y height
+    ImageSOA(int w, int h) : width(w), height(h) {} // NOLINT(*-easily-swappable-parameters)
 };
+
 
 ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight);
 
@@ -120,7 +127,7 @@ namespace imgsoa {
 }  // namespace imgsoa
 
 struct BilinearInterpolationParams {
-  const std::vector<uint8_t>& channel;
+  const std::vector<uint8_t>& channel; // NOLINT(*-avoid-const-or-ref-data-members)
   size_t imageWidth;
   size_t xLow;
   size_t yLow;
