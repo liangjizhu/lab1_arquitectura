@@ -37,8 +37,14 @@ int handleResize(const ProgramArgs& args) {
   const int height = args.getResizeHeight();
   std::cout << "Resizing to " << width << "x" << height << '\n';
 
-  // Delegate the resizing to a separate function in imagesoa.cpp
-  if (!imgsoa::resizeAndSaveImage(args.getInputFile(), args.getOutputFile(), width, height)) {
+  // Create FilePaths struct that holds input and output file paths
+    imgsoa::FilePaths filePaths{
+    args.getInputFile(),  // inputFile path
+    args.getOutputFile()  // outputFile path
+  };
+
+  // Delegate the resizing to the imgsoa namespace function
+  if (!imgsoa::resizeAndSaveImage(filePaths, width, height)) {
     std::cerr << "Error: Resizing failed.\n";
     return -1;
   }

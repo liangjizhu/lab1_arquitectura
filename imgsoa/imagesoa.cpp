@@ -231,12 +231,12 @@ namespace {
 
 }  // namespace
 
-bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputFile, int newWidth, int newHeight) {
+  bool resizeAndSaveImage(const FilePaths& filePaths, int newWidth, int newHeight) {
   PPMHeader header{};
   std::vector<uint8_t> data;
 
   // Step 1: Read the image data
-  if (!readImageData(inputFile, header, data)) {
+  if (!readImageData(filePaths.inputFile, header, data)) {
     return false;
   }
 
@@ -250,7 +250,7 @@ bool resizeAndSaveImage(const std::string& inputFile, const std::string& outputF
   const std::vector<uint8_t> resizedData = convertToFlatData(resizedImage, newWidth, newHeight);
 
   // Step 5: Write resized image to output file
-  return writeImageData(outputFile, resizedData, newWidth, newHeight);
+  return writeImageData(filePaths.outputFile, resizedData, newWidth, newHeight);
 }
 
 }  // namespace imgsoa
@@ -282,44 +282,46 @@ namespace {
     return {xLeft, yLeft, xRight, yRight, xWeight, yWeight};
   }
 
-  namespace {
+    namespace {
 
-    // Inline helper for horizontal interpolation
-    inline float interpolateHorizontal(float left, float right, float weight) {
-      return (left * (1.0F - weight)) + (right * weight);
-    }
+      // Inline helper for horizontal interpolation
+      inline float interpolateHorizontal(float left, float right, float weight) {
+        return (left * (1.0F - weight)) + (right * weight);
+      }
 
-    // Inline helper to load and cast a pixel value to float
-    inline float getPixelValue(const std::vector<uint8_t>& channel, size_t imageWidth, size_t xCoord, size_t yCoord) {
-      return static_cast<float>(channel[(yCoord * imageWidth) + xCoord]);
-    }
+      // Inline helper to load and cast a pixel value to float
+      inline float getPixelValue(const std::vector<uint8_t>& channel, size_t imageWidth, size_t xCoord, size_t yCoord) {
+        return static_cast<float>(channel[(yCoord * imageWidth) + xCoord]);
+      }
 
 
-    // Inline helper for final bilinear interpolation combining horizontal and vertical
-    inline uint8_t interpolateBilinear(float topInterpolation, float bottomInterpolation, float weight) {
-      return static_cast<uint8_t>((topInterpolation * (1.0F - weight)) + (bottomInterpolation * weight));
-    }
+      // Inline helper for final bilinear interpolation combining horizontal and vertical
+      inline uint8_t interpolateBilinear(float topInterpolation, float bottomInterpolation, float weight) {
+        return static_cast<uint8_t>((topInterpolation * (1.0F - weight)) + (bottomInterpolation * weight));
+      }
 
-    // Main function for bilinear interpolation on a single channel
-    uint8_t bilinearInterpolateChannel(
-        const std::vector<uint8_t>& channel, size_t imageWidth,
-        size_t xLow, size_t yLow, size_t xHigh, size_t yHigh, float xWeight, float yWeight) {
+      // Main function for bilinear interpolation on a single channel
+      float interpolateRow(
+      const std::vector<uint8_t>& channel, size_t imageWidth, size_t x1, size_t x2, size_t y, float weight) {
+        const float left = getPixelValue(channel, imageWidth, x1, y);
+        const float right = getPixelValue(channel, imageWidth, x2, y);
+        return interpolateHorizontal(left, right, weight);
+      }
 
-      // Load pixel values using helper function
-      const float topLeft = getPixelValue(channel, imageWidth, xLow, yLow);
-      const float topRight = getPixelValue(channel, imageWidth, xHigh, yLow);
-      const float bottomLeft = getPixelValue(channel, imageWidth, xLow, yHigh);
-      const float bottomRight = getPixelValue(channel, imageWidth, xHigh, yHigh);
+      uint8_t bilinearInterpolateChannel(
+          const std::vector<uint8_t>& channel, size_t imageWidth,
+          size_t xLow, size_t yLow, size_t xHigh, size_t yHigh, float xWeight, float yWeight) {
 
-      // Perform horizontal interpolations
-      const float topInterpolation = interpolateHorizontal(topLeft, topRight, xWeight);
-      const float bottomInterpolation = interpolateHorizontal(bottomLeft, bottomRight, xWeight);
+        // Interpolate the top and bottom rows
+        const float topInterpolation = interpolateRow(channel, imageWidth, xLow, xHigh, yLow, xWeight);
+        const float bottomInterpolation = interpolateRow(channel, imageWidth, xLow, xHigh, yHigh, xWeight);
 
-      // Perform final bilinear interpolation with vertical component
-      return interpolateBilinear(topInterpolation, bottomInterpolation, yWeight);
-    }
+        // Perform vertical interpolation between the two rows
+        return interpolateBilinear(topInterpolation, bottomInterpolation, yWeight);
+      }
 
-  } // end of anonymous namespace
+
+    } // end of anonymous namespace
 
 
 
