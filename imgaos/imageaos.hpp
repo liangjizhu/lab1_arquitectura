@@ -130,6 +130,9 @@ Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int
 std::vector<uint8_t> imageToVector(const Image& image, int channels);
 Image resizeImageAoS(const Image& image, int newWidth, int newHeight);
 Image loadPPM(const std::string& filename);
+struct ScaleRatios {
+  float xRatio; float yRatio;
+};
 
 class ImageAOS {
     public:

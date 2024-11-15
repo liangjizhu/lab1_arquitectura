@@ -4,8 +4,6 @@
 #include "progargs.hpp"
 #include "imageinfo.hpp"
 #include "color.hpp"
-#include "interpolation.hpp"
-
 #include <algorithm>
 #include <cmath>
 #include <filesystem>

@@ -1,6 +1,5 @@
 #include "imgaos/imageaos.hpp"
 #include "common/imageinfo.hpp"
-#include "common/interpolation.hpp"
 #include "imgaos/color.hpp"
 #include <gtest/gtest.h>
 #include <vector>
