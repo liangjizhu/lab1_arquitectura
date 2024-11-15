@@ -7,7 +7,6 @@ constexpr uint16_t BYTE_MASK = 0xFF;
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr size_t COLOR_DATA_SIZE_16BIT = 6;
-constexpr size_t COLOR_DATA_SIZE_8BIT = 3;
 constexpr uint8_t BITS_PER_BYTE = 8; // Nueva constante para los bits por byte
 constexpr uint8_t COLOR_COMPONENT_INDEX_BLUE_HIGH = 5; // Nueva constante para el índice del byte alto de azul (para el clang-tidy)
 
@@ -27,6 +26,24 @@ Color Color::fromBinary(const uint8_t* data, const PPMHeader& header) noexcept {
     }
     return Color({colorData[0], colorData[1], colorData[2]});
 }
+
+// Escribir color a datos binarios según maxColorValue en header
+//void Color::writeToBinaryMod(std::vector<uint8_t>& buffer, const PPMHeader& header) const {
+    //auto append16Bits = [&buffer](uint16_t value) {
+        //buffer.push_back(static_cast<uint8_t>(value & BYTE_MASK));
+        //buffer.push_back(static_cast<uint8_t>(value >> BITS_PER_BYTE));
+    //};
+
+    //if (header.maxColorValue > MAX_COLOR_VALUE_8BIT) {
+        //append16Bits(rgb.red);
+        //append16Bits(rgb.green);
+        //append16Bits(rgb.blue);
+    //} else {
+        //buffer.push_back(static_cast<uint8_t>(rgb.red & BYTE_MASK));
+        //buffer.push_back(static_cast<uint8_t>(rgb.green & BYTE_MASK));
+        //buffer.push_back(static_cast<uint8_t>(rgb.blue & BYTE_MASK));
+    //}
+//}
 
 // Escribir color a datos binarios según maxColorValue en header
 void Color::writeToBinary(std::vector<uint8_t>& buffer, const PPMHeader& header) const {

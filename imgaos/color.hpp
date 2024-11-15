@@ -24,6 +24,8 @@ class Color {
     // Cargar color desde datos binarios según maxColorValue en header
     [[nodiscard]] static Color fromBinary(const uint8_t* data, const PPMHeader& header) noexcept;
 
+    //void Color::writeToBinaryMod(std::vector<uint8_t>& buffer, const PPMHeader& header) const;
+
     // Escribir color a datos binarios según maxColorValue en header
     void writeToBinary(std::vector<uint8_t>& buffer, const PPMHeader& header) const;
 
@@ -35,12 +37,12 @@ class Color {
 struct HashColor {
     size_t operator()(const Color& color) const {
         // Combinamos los valores de los componentes RGB en un solo hash
-        size_t const h1 = std::hash<uint16_t>{}(color.rgb.red);
-        size_t const h2 = std::hash<uint16_t>{}(color.rgb.green);
-        size_t const h3 = std::hash<uint16_t>{}(color.rgb.blue);
+        const size_t hashedRedColor = std::hash<uint16_t>{}(color.rgb.red);
+        const size_t hashedGreenColor = std::hash<uint16_t>{}(color.rgb.green);
+        const size_t hashBlueColor = std::hash<uint16_t>{}(color.rgb.blue);
         
         // Usamos un patrón común de combinar hashes
-        return h1 ^ (h2 << 1) ^ (h3 << 2);
+        return hashedRedColor ^ (hashedGreenColor << 1) ^ (hashBlueColor << 2);
     }
 };
 
