@@ -61,9 +61,6 @@ void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
 
     // Escribir
     writePPM(paths.outputFile, outputBytes, header.width, header.height);
-
-    //Modificar los colores
-    std::cout <<"j";
 }
 
 /********************************************* COMPRESS AOS *********************************************/
