@@ -21,7 +21,22 @@ int handleMaxLevel(const ProgramArgs& args) {
         std::cerr << args.getErrorMessage() << '\n';
         return -1;
     }
-    processMaxLevel(BinaryIO::readBinaryFile(args.getInputFile()), args.getMaxLevel());
+    auto paths = args.getFilePaths();
+    if (!paths.has_value()) {
+        std::cerr << "Error: No se pudo obtener los archivos de entrada y salida." << '\n';
+        return -1;
+    }
+
+    std::cout << "Cambiando intensidad de imagen..." << '\n';
+    auto start = std::chrono::high_resolution_clock::now();
+    processMaxLevel(paths.value(), static_cast<uint16_t>(args.getMaxLevel()));
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+    end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> const duration = end - start;
+    std::cout << "Time taken: " << duration.count() << " seconds\n";
+
     return 0;
 }
 

@@ -58,6 +58,12 @@ void processInfo(const std::string& inputFile) {
     }
 }
 
+std::string generateHeaderMaxlevel(const PPMHeader& header, int maxlevel) {
+    std::ostringstream headerStream;
+    headerStream << "P6\n" << header.width << " " << header.height << " " << maxlevel << "\n";
+    return headerStream.str();
+}
+
 // COMPRESS
 // Reutilizar: Generar encabezado del archivo comprimido
 std::string generateHeader(const PPMHeader& header, int colorTableSize) {
