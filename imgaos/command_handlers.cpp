@@ -27,36 +27,42 @@ int handleMaxLevel(const ProgramArgs& args) {
 
 // Función para manejar el comando 'resize'
 int handleResize(const ProgramArgs& args) {
-    if (!args.validateResize()) {
-        std::cerr << args.getErrorMessage() << '\n';
-        return -1;
-    }
+  if (!args.validateResize()) {
+    std::cerr << args.getErrorMessage() << '\n';
+    return -1;
+  }
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int const width = args.getResizeWidth();
-    int const height = args.getResizeHeight();
-    std::cout << "Resizing to " << width << "x" << height << '\n';
+  auto const start = std::chrono::high_resolution_clock::now();
+  int const width = args.getResizeWidth();
+  int const height = args.getResizeHeight();
+  std::cout << "Resizing to " << width << "x" << height << '\n';
 
-    int originalWidth, originalHeight, maxColorValue;
-    std::vector<uint8_t> rawData = readPPM(args.getInputFile(), originalWidth, originalHeight, maxColorValue);
+  // Initialize variables individually
+  int originalWidth = 0;
+  int originalHeight = 0;
+  int maxColorValue = 0;
 
-    if (originalWidth == 0 || originalHeight == 0) {
-        std::cerr << "Error: Could not retrieve image dimensions.\n";
-        return -1;
-    }
+  const std::vector<uint8_t> rawData = readPPM(args.getInputFile(), originalWidth, originalHeight, maxColorValue);
 
-    int channels = 3;
-    Image originalImage = vectorToImage(rawData, originalWidth, originalHeight, channels);
-    Image resizedImage = resizeImageAoS(originalImage, width, height);
-    std::vector<uint8_t> resizedData = imageToVector(resizedImage, channels);
-    writePPM(args.getOutputFile(), resizedData, width, height);
+  if (originalWidth == 0 || originalHeight == 0) {
+    std::cerr << "Error: Could not retrieve image dimensions.\n";
+    return -1;
+  }
 
-    std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> const duration = end - start;
-    std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
-    return 0;
+  const int channels = 3;
+  const Image originalImage = vectorToImage(rawData, originalWidth, originalHeight, channels);
+  const Image resizedImage = resizeImageAoS(originalImage, width, height);
+  const std::vector<uint8_t> resizedData = imageToVector(resizedImage, channels);
+  writePPM(args.getOutputFile(), resizedData, width, height);
+
+  std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+  auto const end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> const duration = end - start;
+  std::cout << "Time taken: " << duration.count() << " seconds\n";
+
+  return 0;
 }
+
 
 // Función para manejar el comando 'cutfreq'
 int handleCutFreq(const ProgramArgs& args) {

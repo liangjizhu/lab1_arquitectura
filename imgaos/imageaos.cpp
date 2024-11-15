@@ -28,58 +28,71 @@ constexpr uint8_t BITS_PER_BYTE = 8;
 //  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
 //  - clang-tidy
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
-    int contadorDeLineas = 0;
-    std::string maxIntensidadStr;
-    int maxIntensidadInt = 0;
-    //bool altaIntensidad;
+  std::string buffer    = "";
+  int antiguaIntensidad = 0;
+  int ancho             = 0;
+  int anchoContador     = 0;
+  int contadorDeLineas  = 0;
 
-    //int contador = 0;
-    //int contador_aux = 0;
-    //uint8_t pet[2];
-    //uint16_t caster;
+  // const int maxIntensidadBaja = 256;
+  // int tipoConversion = 0; // Se podría usar 4 bits en vez de 8
 
-    //Leer archivo
-    for (unsigned char & i : inputFile){
-        if (contadorDeLineas < 3){
-            std::cout << i;
+  std::vector<uint8_t> output = {};
+
+  // std::ofstream stream;
+  // stream.open("output1.ppm");
+  std::cout << "\nProcessing 'maxlevel' for file: " << inputFile.size() << " with max level: " << maxLevel << '\n';
+
+  // Leer archivo
+  for (auto i = inputFile.begin(); i != inputFile.end(); ++i) {
+    // Saltos de línea
+    if ((*i == '\n') && ((anchoContador == ancho) || (contadorDeLineas < 3))) {
+      // Añadir al output la nueva instensidad
+      if (contadorDeLineas == 2) {
+        // Extraer antigua intensidad
+        antiguaIntensidad = std::stoi(buffer);
+
+        // if ((antiguaIntensidad < maxIntensidadBaja) && (maxLevel < maxIntensidadBaja))
+
+        buffer = std::to_string(static_cast<int>(maxLevel));
+        for (auto j = buffer.begin(); j != buffer.end(); ++j) {
+          output.push_back(static_cast<unsigned char>(*j));
         }
+      }
 
-        //Tener en cuenta las líneas (usando los newlines)
-        if (i == '\n'){
-            //Ubicación de máxima intensidad en el archivo ppm
-            if (contadorDeLineas == 2){
-                std::cout << "Máxima intensidad: " << maxIntensidadStr << "\n";
-                maxIntensidadInt  = std::stoi(maxIntensidadStr);
+      // Añadir al output
+      if (contadorDeLineas < 3) { output.push_back(static_cast<unsigned char>(*i)); }
 
-                if (maxIntensidadInt < 256){
-                    std::cout << "Intensidad baja";
-                }
-            }
-            contadorDeLineas++;
-        } else if ((i == ' ') || (i == '\t')){
-            std::cout << "\ndo nothing\n";
-        } else {
-            if (contadorDeLineas == 2) {
-                maxIntensidadStr.append(1, static_cast<char>(i));
-            }
-            //pet[contador] = *i;
-            //if (contadorDeLineas >= 3){
-                //if (contador >= 1){
-                    //caster = (static_cast<u_int16_t>(pet[0]) << 8) | pet[1];
-                    //contador = 0;
-                    //std::cout << "casted: " << caster << "\n";
-                //} else {
-                    //contador++;
-                //}
-            //}
-        }
-        //contador_aux++;
+      // Aumentar contador de líneas
+      contadorDeLineas++;
+
+      // Reseatear buffer
+      buffer = "";
+
+    } else {
+      // Sacar ancho para analizar archivo
+      if (((ancho == 0) && (contadorDeLineas == 1)) || (contadorDeLineas == 2)) {
+        // Checkear si es el fin del ancho
+        if (*i == ' ') { ancho = std::stoi(buffer); }
+
+        // Añadir char al buffer
+        buffer.append(1, static_cast<char>(*i));
+      }
+
+      // Añadir al output
+      if (contadorDeLineas < 2) {
+        output.push_back(static_cast<unsigned char>(*i));
+      } else if (contadorDeLineas > 2) {
+        output.push_back(
+            static_cast<u_int8_t>((static_cast<int>(*i)) * maxLevel / antiguaIntensidad));
+      }
+
+      // Añadir ancho
+      anchoContador++;
     }
+  }
 
-    // Lógica para el comando 'maxlevel'
-    std::cout << "\nProcessing 'maxlevel' for file: " << inputFile.size() << " with max level: " << maxLevel << '\n';
-
-    // Aquí iría la lógica para modificar el nivel máximo del archivo
+  BinaryIO::writeBinaryFile("output.ppm", output);
 }
 
 // TODO
@@ -353,98 +366,82 @@ namespace {
     float yRatio;
   };
 
+  // Function to calculate weights based on source coordinates
+  std::pair<float, float> calculateWeights(float srcX, float srcY, size_t lowerX, size_t lowerY) {
+    // Calculate x and y weights for interpolation
+    float xWeight = srcX - static_cast<float>(lowerX);
+    float yWeight = srcY - static_cast<float>(lowerY);
+
+    // Ensure weights are within the range [0, 1] for accuracy
+    xWeight = std::clamp(xWeight, 0.0F, 1.0F);
+    yWeight = std::clamp(yWeight, 0.0F, 1.0F);
+
+    return {xWeight, yWeight};
+  }
+
   std::pair<float, float> computeSourceCoordinates(int targetX, int targetY, const ScaleRatios& ratios) {
     const float srcX = static_cast<float>(targetX) * ratios.xRatio;
     const float srcY = static_cast<float>(targetY) * ratios.yRatio;
     return {srcX, srcY};
   }
-}
+
+  // Helper function to interpolate a single color channel
+  uint8_t interpolateChannel(uint8_t topLeft, uint8_t topRight, uint8_t bottomLeft, uint8_t bottomRight, float xWeight, float yWeight) {
+    return static_cast<uint8_t>(
+        (static_cast<float>(topLeft) * (1.0F - xWeight) * (1.0F - yWeight)) +
+        (static_cast<float>(topRight) * xWeight * (1.0F - yWeight)) +
+        (static_cast<float>(bottomLeft) * (1.0F - xWeight) * yWeight) +
+        (static_cast<float>(bottomRight) * xWeight * yWeight)
+    );
+  }
 
 
-namespace {
-  struct SourceCoordinates {
-    float srcX;
-    float srcY;
-    size_t lowerX;
-    size_t lowerY;
+  // Main function to interpolate the pixel
+  Pixel interpolatePixel(const Pixel& topLeft, const Pixel& topRight,
+                       const Pixel& bottomLeft, const Pixel& bottomRight,
+                       float xWeight, float yWeight) {
+    // Directly initialize Pixel with results from interpolateChannel for each color channel
+    return Pixel{
+      .r = interpolateChannel(topLeft.r, topRight.r, bottomLeft.r, bottomRight.r, xWeight, yWeight),
+      .g = interpolateChannel(topLeft.g, topRight.g, bottomLeft.g, bottomRight.g, xWeight, yWeight),
+      .b = interpolateChannel(topLeft.b, topRight.b, bottomLeft.b, bottomRight.b, xWeight, yWeight)
   };
-
-  // Updated function to calculate weights with better precision
-  std::pair<float, float> calculateWeights(const SourceCoordinates& coords) {
-    const float xWeight = std::clamp(coords.srcX - static_cast<float>(coords.lowerX), 0.0f, 1.0f);
-    const float yWeight = std::clamp(coords.srcY - static_cast<float>(coords.lowerY), 0.0f, 1.0f);
-    return {xWeight, yWeight};
   }
 }
 
-
-// Helper function to perform bilinear interpolation
-Pixel interpolatePixel(const Pixel& topLeft, const Pixel& topRight,
-                       const Pixel& bottomLeft, const Pixel& bottomRight,
-                       float xWeight, float yWeight) {
-  Pixel interpolatedPixel = {0, 0, 0};
-
-  interpolatedPixel.r = static_cast<uint8_t>(
-      (topLeft.r * (1.0f - xWeight) * (1.0f - yWeight)) +
-      (topRight.r * xWeight * (1.0f - yWeight)) +
-      (bottomLeft.r * (1.0f - xWeight) * yWeight) +
-      (bottomRight.r * xWeight * yWeight)
-  );
-  interpolatedPixel.g = static_cast<uint8_t>(
-      (topLeft.g * (1.0f - xWeight) * (1.0f - yWeight)) +
-      (topRight.g * xWeight * (1.0f - yWeight)) +
-      (bottomLeft.g * (1.0f - xWeight) * yWeight) +
-      (bottomRight.g * xWeight * yWeight)
-  );
-  interpolatedPixel.b = static_cast<uint8_t>(
-      (topLeft.b * (1.0f - xWeight) * (1.0f - yWeight)) +
-      (topRight.b * xWeight * (1.0f - yWeight)) +
-      (bottomLeft.b * (1.0f - xWeight) * yWeight) +
-      (bottomRight.b * xWeight * yWeight)
-  );
-  return interpolatedPixel;
-}
-
-
-
 Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
-    const size_t originalWidth = image[0].size();
-    const size_t originalHeight = image.size();
+  const size_t originalWidth = image[0].size();
+  const size_t originalHeight = image.size();
 
-    // Create the resized image
-    Image resizedImage(static_cast<size_t>(newHeight), std::vector<Pixel>(static_cast<size_t>(newWidth)));
+  Image resizedImage(static_cast<size_t>(newHeight), std::vector<Pixel>(static_cast<size_t>(newWidth)));
 
-    ScaleRatios ratios = {static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1),
-                          static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1)};
+  const ScaleRatios scaleRatios = {
+    .xRatio = static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1),
+    .yRatio = static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1)
+};
 
-    for (size_t y = 0; y < static_cast<size_t>(newHeight); ++y) {
-        for (size_t x = 0; x < static_cast<size_t>(newWidth); ++x) {
-            auto [srcX, srcY] = computeSourceCoordinates(static_cast<int>(x), static_cast<int>(y), ratios);
+  for (size_t rowIndex = 0; rowIndex < static_cast<size_t>(newHeight); ++rowIndex) {
+    for (size_t colIndex = 0; colIndex < static_cast<size_t>(newWidth); ++colIndex) {
+      auto [srcX, srcY] = computeSourceCoordinates(static_cast<int>(colIndex), static_cast<int>(rowIndex), scaleRatios);
 
-            // Integer indices of the neighboring pixels, cast to size_t
-            const size_t xL = std::min(static_cast<size_t>(srcX), originalWidth - 1);
-            const size_t yL = std::min(static_cast<size_t>(srcY), originalHeight - 1);
-            const size_t xH = std::clamp(xL + 1, size_t(0), originalWidth - 1);
-            const size_t yH = std::clamp(yL + 1, size_t(0), originalHeight - 1);
+      const auto lowerX = static_cast<size_t>(std::floor(srcX));
+      const auto lowerY = static_cast<size_t>(std::floor(srcY));
+      const auto upperX = std::min(lowerX + 1, originalWidth - 1);
+      const auto upperY = std::min(lowerY + 1, originalHeight - 1);
 
-            // Create a SourceCoordinates instance
-            SourceCoordinates coords = {srcX, srcY, xL, yL};
+      // Calculate weights based on source coordinates
+      auto [xWeight, yWeight] = calculateWeights(srcX, srcY, lowerX, lowerY);
 
-            // Calculate interpolation weights
-            auto [xWeight, yWeight] = calculateWeights(coords);
+      const Pixel& topLeft = image[lowerY][lowerX];
+      const Pixel& topRight = image[lowerY][upperX];
+      const Pixel& bottomLeft = image[upperY][lowerX];
+      const Pixel& bottomRight = image[upperY][upperX];
 
-            // Get the four neighboring pixels
-            const Pixel& topLeft = image[yL][xL];
-            const Pixel& topRight = image[yL][xH];
-            const Pixel& bottomLeft = image[yH][xL];
-            const Pixel& bottomRight = image[yH][xH];
-
-            // Interpolate the pixel
-            resizedImage[y][x] = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, xWeight, yWeight);
-        }
+      resizedImage[rowIndex][colIndex] = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, xWeight, yWeight);
     }
+  }
 
-    return resizedImage;
+  return resizedImage;
 }
 
 
@@ -457,13 +454,13 @@ Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
 
 
 std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int, HashColor>& frecuencia, int n) {
-    
+
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
     std::vector<std::pair<Color, int>> colores_frecuentes(frecuencia.begin(), frecuencia.end());
 
     // Ordenar por frecuencia ascendente
     //sort es parte de <include algorithm>
-    std::sort(colores_frecuentes.begin(), colores_frecuentes.end(), 
+    std::sort(colores_frecuentes.begin(), colores_frecuentes.end(),
         [](const auto& colora, const auto& colorb) {
             return colora.second < colorb.second; // Comparar por la frecuencia (segundo elemento del par)
         }
@@ -587,7 +584,7 @@ std::unique_ptr<KDNode> construirKDTree(std::vector<Color>& colores, int depth =
     };
 
     const std::vector<Color>::size_type mid = colores.size() / 2;
-    
+
     // Usa nth_element para colocar el mediano en su posición sin ordenar todo el vector
     std::nth_element(colores.begin(), colores.begin() + static_cast<std::vector<Color>::difference_type>(mid), colores.end(), comp);
 
@@ -663,7 +660,7 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
     for (const auto& color : coloresMenosFrecuentes) {
         // Capturar el resultado de buscarVecinoMasCercano
         auto [mejorColor, mejorDistanciaCuadrada] = buscarVecinoMasCercano(root, color, 0);
-        
+
         // Agregar el mejor color encontrado a la lista de colores cercanos
         coloresCercanos.push_back(mejorColor);
     }
@@ -742,17 +739,17 @@ ImageData loadImageData(const std::string& inputFile) {
     auto [width, height] = getPPMDimensions(inputFile);
     data.width = width;
     data.height = height;
-    
+
     const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(inputFile);
     if (fileData.empty()) {
         throw std::runtime_error("No se pudo abrir o leer el archivo de entrada: " + inputFile);
     }
-    
+
     PPMHeader header{};
     if (!readPPMHeader(inputFile, header)) {
         throw std::runtime_error("Error al leer el encabezado del archivo PPM.");
     }
-    
+
     data.pixels = extractImagePixels(fileData, header);
     return data;
 }
@@ -763,10 +760,10 @@ void calculateColorFrequencies(ImageData& data) {
     const size_t arraySize = static_cast<size_t>(1) << (3 * colorBits);
     data.colorCount.resize(arraySize, 0);
     data.uniqueColors.reserve(arraySize / 4);
-    
+
     for (const auto& pixel : data.pixels) {
-        const size_t index = (static_cast<size_t>(pixel.rgb.red) << 16) | 
-                           (static_cast<size_t>(pixel.rgb.green) << 8) | 
+        const size_t index = (static_cast<size_t>(pixel.rgb.red) << 16) |
+                           (static_cast<size_t>(pixel.rgb.green) << 8) |
                            static_cast<size_t>(pixel.rgb.blue);
         if (data.colorCount.at(index)++ == 0) {
             data.uniqueColors.push_back(pixel);
@@ -780,8 +777,8 @@ std::vector<Color> findLessFrequentColors(const ImageData& data, int numColors) 
     colorFreqPairs.reserve(data.uniqueColors.size());
     // Crear los pares (frecuencia, color)
     for (const auto& color : data.uniqueColors) {
-        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) | 
-                           (static_cast<size_t>(color.rgb.green) << 8) | 
+        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) |
+                           (static_cast<size_t>(color.rgb.green) << 8) |
                            static_cast<size_t>(color.rgb.blue);
         colorFreqPairs.emplace_back(data.colorCount.at(index), color);
     }
@@ -818,24 +815,24 @@ std::vector<Color> findLessFrequentColors(const ImageData& data, int numColors) 
 }
 
 // Función para preparar los colores restantes para el KD-Tree
-std::vector<Color> prepareRemainingColors(const ImageData& data, 
+std::vector<Color> prepareRemainingColors(const ImageData& data,
                                         const std::vector<Color>& menosFrecuentes) {
     const size_t arraySize = data.colorCount.size();
     std::vector<bool> isLessFrequent(arraySize, false);
-    
+
     for (const auto& color : menosFrecuentes) {
-        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) | 
-                           (static_cast<size_t>(color.rgb.green) << 8) | 
+        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) |
+                           (static_cast<size_t>(color.rgb.green) << 8) |
                            static_cast<size_t>(color.rgb.blue);
         isLessFrequent.at(index) = true;
     }
-    
+
     std::vector<Color> coloresRestantes;
     coloresRestantes.reserve(data.uniqueColors.size() - menosFrecuentes.size());
-    
+
     for (const auto& color : data.uniqueColors) {
-        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) | 
-                           (static_cast<size_t>(color.rgb.green) << 8) | 
+        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) |
+                           (static_cast<size_t>(color.rgb.green) << 8) |
                            static_cast<size_t>(color.rgb.blue);
         if (!isLessFrequent.at(index)) {
             coloresRestantes.push_back(color);
@@ -845,27 +842,27 @@ std::vector<Color> prepareRemainingColors(const ImageData& data,
 }
 
 // Función para sustituir los colores menos frecuentes
-void substituteColors(std::vector<Color>& pixels, 
+void substituteColors(std::vector<Color>& pixels,
                      const std::vector<Color>& menosFrecuentes,
                      std::unique_ptr<KDNode>& kdTreeRoot) {
     constexpr int colorBits = 8;
     const size_t arraySize = static_cast<size_t>(1) << (3 * colorBits);
     std::vector<bool> isLessFrequent(arraySize, false);
     std::vector<Color> substitutionLookup(arraySize);
-    
+
     for (const auto& color : menosFrecuentes) {
-        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) | 
-                           (static_cast<size_t>(color.rgb.green) << 8) | 
+        const size_t index = (static_cast<size_t>(color.rgb.red) << 16) |
+                           (static_cast<size_t>(color.rgb.green) << 8) |
                            static_cast<size_t>(color.rgb.blue);
         isLessFrequent.at(index) = true;
-        
+
         auto [colorMasCercano, _] = buscarVecinoMasCercano(kdTreeRoot, color, 0);
         substitutionLookup.at(index) = colorMasCercano;
     }
-    
+
     for (auto& pixel : pixels) {
-        const size_t index = (static_cast<size_t>(pixel.rgb.red) << 16) | 
-                           (static_cast<size_t>(pixel.rgb.green) << 8) | 
+        const size_t index = (static_cast<size_t>(pixel.rgb.red) << 16) |
+                           (static_cast<size_t>(pixel.rgb.green) << 8) |
                            static_cast<size_t>(pixel.rgb.blue);
         if (isLessFrequent.at(index)) {
             pixel = substitutionLookup.at(index);
@@ -878,20 +875,20 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     try {
         std::cout << "Leyendo imagen..." << '\n';
         ImageData imageData = loadImageData(inputFile);
-        
+
         std::cout << "Calculando frecuencias..." << '\n';
         calculateColorFrequencies(imageData);
         std::cout<< "Colores únicos al principio: " << imageData.uniqueColors.size() << '\n';
         std::cout << "Identificando colores menos frecuentes..." << '\n';
         const std::vector<Color> menosFrecuentes = findLessFrequentColors(imageData, numColors);
-        
+
         std::cout << "Construyendo KD-Tree..." << '\n';
         std::vector<Color> coloresRestantes = prepareRemainingColors(imageData, menosFrecuentes);
         auto kdTreeRoot = construirKDTree(coloresRestantes);
-        
+
         std::cout << "Realizando sustituciones..." << '\n';
         substituteColors(imageData.pixels, menosFrecuentes, kdTreeRoot);
-        
+
         std::cout << "Escribiendo imagen modificada..." << '\n';
         escribirPPM(outputFile, imageData.pixels, imageData.width, imageData.height);
         ImageData imageData2 = loadImageData(outputFile);
