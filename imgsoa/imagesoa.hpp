@@ -98,55 +98,36 @@ struct ImageSOA {
 
 ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight);
 
-// Define Pixel and Image for AoS (Array of Structs)
-struct Pixel {
-  uint8_t r, g, b;
-};
+namespace imgsoa {
 
-using Image = std::vector<std::vector<Pixel>>;
+  // Strongly typed wrappers for input and output file paths
+  struct ImgSOAInputFile {
+    std::string path;
+  };
 
-// Function declarations for your image manipulation functions
-Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int channels);
-std::vector<uint8_t> imageToVector(const Image& image, int channels);
-Image resizeImageAoS(const Image& image, int newWidth, int newHeight);
+  struct ImgSOAOutputFile {
+    std::string path;
+  };
 
-// Helper structures for resize and interpolation functions
-struct Coordinate {
-  float x;
-  float y;
-};
+  struct FilePaths {
+    std::string inputFile;
+    std::string outputFile;
+  };
 
-struct TargetCoordinates {
-  int x;
-  int y;
-};
+  // Declare resizeAndSaveImage in the header file
+  bool resizeAndSaveImage(const FilePaths& filePaths, int newWidth, int newHeight);
 
-struct InterpolationChannelParams {
-  uint8_t topLeft;
-  uint8_t topRight;
-  uint8_t bottomLeft;
-  uint8_t bottomRight;
+}  // namespace imgsoa
+
+struct BilinearInterpolationParams {
+  const std::vector<uint8_t>& channel;
+  size_t imageWidth;
+  size_t xLow;
+  size_t yLow;
+  size_t xHigh;
+  size_t yHigh;
   float xWeight;
   float yWeight;
 };
-
-struct InterpolationPixelParams {
-  Pixel topLeft;
-  Pixel topRight;
-  Pixel bottomLeft;
-  Pixel bottomRight;
-  float xWeight;
-  float yWeight;
-};
-
-struct ScaleRatios {
-  float xRatio;
-  float yRatio;
-};
-
-// These functions will be used in tests for image resizing
-Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int channels);
-std::vector<uint8_t> imageToVector(const Image& image, int channels);
-Image resizeImageAoS(const Image& image, int newWidth, int newHeight);
 
 #endif // IMAGESOA_HPP
