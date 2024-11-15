@@ -4,7 +4,7 @@
 #include "imageaos.hpp"
 #include <iostream>
 #include <chrono>
-void processCutfreq(const std::string& inputFile, int frequency, const std::string& outputFile);
+
 // Función para manejar el comando 'info'
 int handleInfo(const ProgramArgs& args) {
     if (!args.validateInfo()) {
