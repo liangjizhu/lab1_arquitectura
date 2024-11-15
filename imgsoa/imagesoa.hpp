@@ -111,9 +111,21 @@ namespace imgsoa {
     std::string inputFile;
     std::string outputFile;
   };
+
   // Declare resizeAndSaveImage in the header file
   bool resizeAndSaveImage(const FilePaths& filePaths, int newWidth, int newHeight);
 
 }  // namespace imgsoa
+
+struct BilinearInterpolationParams {
+  const std::vector<uint8_t>& channel;
+  size_t imageWidth;
+  size_t xLow;
+  size_t yLow;
+  size_t xHigh;
+  size_t yHigh;
+  float xWeight;
+  float yWeight;
+};
 
 #endif // IMAGESOA_HPP

@@ -1,4 +1,5 @@
 #include "imgsoa/imagesoa.hpp"
+#include "imgsoa/imagesoa.cpp"
 #include "common/imageinfo.hpp"
 #include "imgsoa/color.hpp"
 #include <gtest/gtest.h>
@@ -137,7 +138,9 @@ TEST(ImageSoATest, AppendPixelIndicesSoA) {
     EXPECT_EQ(compressedData[2], 1);
     EXPECT_EQ(compressedData[3], 0);
 }
-/********************************************************************************************************/
+/*********************************************  RESIZE  *************************************************/
+
+
 
 /********************************************* CUTFREQ SOA *********************************************/
 // Prueba para readImageAndStoreChannels

@@ -191,23 +191,27 @@ namespace imgsoa {
       return true;
     }
 
-    ImageSOA convertToSOA(const std::vector<uint8_t>& data, const PPMHeader& header) {
-      ImageSOA image;
-      image.width = header.width;
-      image.height = header.height;
-      const size_t pixelCount = static_cast<size_t>(image.width) * static_cast<size_t>(image.height);
+    namespace {
+      ImageSOA convertToSOA(const std::vector<uint8_t>& data, const PPMHeader& header) {
+        ImageSOA image;
+        image.width = header.width;
+        image.height = header.height;
+        const size_t pixelCount = static_cast<size_t>(image.width) * static_cast<size_t>(image.height);
 
-      image.redChannel.resize(pixelCount);
-      image.greenChannel.resize(pixelCount);
-      image.blueChannel.resize(pixelCount);
+        image.redChannel.resize(pixelCount);
+        image.greenChannel.resize(pixelCount);
+        image.blueChannel.resize(pixelCount);
 
-      for (size_t i = 0, j = 0; i < data.size(); i += 3, ++j) {
-        image.redChannel[j] = data[i];
-        image.greenChannel[j] = data[i + 1];
-        image.blueChannel[j] = data[i + 2];
+        for (size_t i = 0, j = 0; i < data.size(); i += 3, ++j) {
+          image.redChannel[j] = data[i];
+          image.greenChannel[j] = data[i + 1];
+          image.blueChannel[j] = data[i + 2];
+        }
+        return image;
       }
-      return image;
     }
+
+
 
     std::vector<uint8_t> convertToFlatData(const ImageSOA& image, int newWidth, int newHeight) {
       std::vector<uint8_t> resizedData(static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight) * 3);
@@ -273,8 +277,9 @@ namespace imgsoa {
 
       const auto xLeft = static_cast<size_t>(std::floor(sourceCoords.x));
       const auto yLeft = static_cast<size_t>(std::floor(sourceCoords.y));
-      const auto xRight = std::clamp(xLeft + 1, size_t(0), originalDims.width - 1);
-      const auto yRight = std::clamp(yLeft + 1, size_t(0), originalDims.height - 1);
+      const auto xRight = std::clamp(xLeft + 1, static_cast<size_t>(0), originalDims.width - 1);
+      const auto yRight = std::clamp(yLeft + 1, static_cast<size_t>(0), originalDims.height - 1);
+
 
       const float xWeight = sourceCoords.x - static_cast<float>(xLeft);
       const float yWeight = sourceCoords.y - static_cast<float>(yLeft);
@@ -285,7 +290,7 @@ namespace imgsoa {
   namespace {
 
 struct RowInterpolationParams {
-    const std::vector<uint8_t>& channel;
+    const std::vector<uint8_t>& channel; //NOLINT
     size_t imageWidth;
     size_t xLow;
     size_t xHigh;
@@ -305,7 +310,7 @@ std::pair<size_t, size_t> getRowIndices(const RowInterpolationParams& params) {
 }
 
 // Function to interpolate between two channel values
-float interpolate(float lowValue, float highValue, float weight) {
+float interpolate(float lowValue, float highValue, float weight) { //NOLINT
     return lowValue + (weight * (highValue - lowValue));
 }
 
@@ -314,23 +319,36 @@ float interpolateRow(const RowInterpolationParams& params) {
     const auto [leftIndex, rightIndex] = getRowIndices(params);
     const float left = getValueAtPosition(params.channel, leftIndex);
     const float right = getValueAtPosition(params.channel, rightIndex);
-    return interpolate(left, right, 0.5F);  // No weight here, will be added in main function
+    return interpolate(left, right, 0.0F);  // No weight here, will be added in main function
 }
 
-// Main bilinear interpolation function on a single channel
-uint8_t bilinearInterpolateChannel(
-    const std::vector<uint8_t>& channel, size_t imageWidth,
-    size_t xLow, size_t yLow, size_t xHigh, size_t yHigh, float xWeight, float yWeight) {
+uint8_t bilinearInterpolateChannel(const BilinearInterpolationParams& params) {
+  const RowInterpolationParams topParams = {
+    .channel = params.channel,
+    .imageWidth = params.imageWidth,
+    .xLow = params.xLow,
+    .xHigh = params.xHigh,
+    .y = params.yLow
+};
+  const RowInterpolationParams bottomParams = {
+    .channel = params.channel,
+    .imageWidth = params.imageWidth,
+    .xLow = params.xLow,
+    .xHigh = params.xHigh,
+    .y = params.yHigh
+};
 
-    RowInterpolationParams topParams = {channel, imageWidth, xLow, xHigh, yLow};
-    RowInterpolationParams bottomParams = {channel, imageWidth, xLow, xHigh, yHigh};
+  const float topInterpolation = interpolateRow(topParams) * params.xWeight;
+  const float bottomInterpolation = interpolateRow(bottomParams) * (1 - params.xWeight);
 
-    const float topInterpolation = interpolateRow(topParams) * xWeight;
-    const float bottomInterpolation = interpolateRow(bottomParams) * (1 - xWeight);
-
-    // Perform vertical interpolation between the two rows
-    return static_cast<uint8_t>((topInterpolation + yWeight * (bottomInterpolation - topInterpolation)));
+  // Perform vertical interpolation between the two rows
+  return static_cast<uint8_t>(topInterpolation + (params.yWeight * (bottomInterpolation - topInterpolation)));
 }
+
+
+
+
+
 
 } // end of anonymous namespace
 
@@ -352,47 +370,74 @@ uint8_t bilinearInterpolateChannel(
   } // end of anonymous namespace
 
 
-  // Main resizing function
-  ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
-      ImageSOA resizedImage;
-      resizedImage.width = newWidth;
-      resizedImage.height = newHeight;
+  ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) { //NOLINT
+    ImageSOA resizedImage;
+    resizedImage.width = newWidth;
+    resizedImage.height = newHeight;
 
-      const size_t pixelCount = static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight);
-      resizedImage.redChannel.resize(pixelCount);
-      resizedImage.greenChannel.resize(pixelCount);
-      resizedImage.blueChannel.resize(pixelCount);
+    const size_t pixelCount = static_cast<size_t>(newWidth) * static_cast<size_t>(newHeight);
+    resizedImage.redChannel.resize(pixelCount);
+    resizedImage.greenChannel.resize(pixelCount);
+    resizedImage.blueChannel.resize(pixelCount);
 
     // Define original and new dimensions with designated initializers
     const ImageDimensions originalDims = {.width = static_cast<size_t>(image.width), .height = static_cast<size_t>(image.height)};
     const ImageDimensions newDims = {.width = static_cast<size_t>(newWidth), .height = static_cast<size_t>(newHeight)};
 
+    // Calculate scaling ratios
+    auto [xRatio, yRatio] = calculateScalingRatios(originalDims, newDims);
 
-      // Calculate scaling ratios
-      auto [xRatio, yRatio] = calculateScalingRatios(originalDims, newDims);
+    for (int newY = 0; newY < newHeight; ++newY) {
+        for (int newX = 0; newX < newWidth; ++newX) {
+            const SourceCoordinates sourceCoords = {.x = static_cast<float>(newX) * xRatio, .y = static_cast<float>(newY) * yRatio};
 
-    for (int newY = 0; newY < newHeight; ++newY) {  // Updated loop variable name
-      for (int newX = 0; newX < newWidth; ++newX) {  // Updated loop variable name
-        const SourceCoordinates sourceCoords = {.x = static_cast<float>(newX) * xRatio, .y = static_cast<float>(newY) * yRatio};  // Use const and designated initializer
+            // Calculate source coordinates and weights
+            auto [xLow, yLow, xHigh, yHigh, xWeight, yWeight] = calculateSourceCoordinatesAndWeights(sourceCoords, originalDims);
 
-        // Calculate source coordinates and weights
-        auto [xLow, yLow, xHigh, yHigh, xWeight, yWeight] = calculateSourceCoordinatesAndWeights(sourceCoords, originalDims);  // Updated variable names
+            const size_t index = (static_cast<size_t>(newY) * static_cast<size_t>(newWidth)) + static_cast<size_t>(newX);
 
-        const size_t index = (static_cast<size_t>(newY) * static_cast<size_t>(newWidth)) + static_cast<size_t>(newX);  // Declared as const and added parentheses for clarity
+            // Interpolate and set pixel for red channel
+            resizedImage.redChannel[index] = bilinearInterpolateChannel({
+                .channel = image.redChannel,
+                .imageWidth = originalDims.width,
+                .xLow = xLow,
+                .yLow = yLow,
+                .xHigh = xHigh,
+                .yHigh = yHigh,
+                .xWeight = xWeight,
+                .yWeight = yWeight
+            });
 
-        // Interpolate each channel and set resized image pixels
-        resizedImage.redChannel[index] = bilinearInterpolateChannel(
-            image.redChannel, originalDims.width, xLow, yLow, xHigh, yHigh, xWeight, yWeight);
-        resizedImage.greenChannel[index] = bilinearInterpolateChannel(
-            image.greenChannel, originalDims.width, xLow, yLow, xHigh, yHigh, xWeight, yWeight);
-        resizedImage.blueChannel[index] = bilinearInterpolateChannel(
-            image.blueChannel, originalDims.width, xLow, yLow, xHigh, yHigh, xWeight, yWeight);
-      }
+            // Interpolate and set pixel for green channel
+            resizedImage.greenChannel[index] = bilinearInterpolateChannel({
+                .channel = image.greenChannel,
+                .imageWidth = originalDims.width,
+                .xLow = xLow,
+                .yLow = yLow,
+                .xHigh = xHigh,
+                .yHigh = yHigh,
+                .xWeight = xWeight,
+                .yWeight = yWeight
+            });
+
+            // Interpolate and set pixel for blue channel
+            resizedImage.blueChannel[index] = bilinearInterpolateChannel({
+                .channel = image.blueChannel,
+                .imageWidth = originalDims.width,
+                .xLow = xLow,
+                .yLow = yLow,
+                .xHigh = xHigh,
+                .yHigh = yHigh,
+                .xWeight = xWeight,
+                .yWeight = yWeight
+            });
+        }
     }
 
+    return resizedImage;
+}
 
-      return resizedImage;
-  }
+
 
 
 
