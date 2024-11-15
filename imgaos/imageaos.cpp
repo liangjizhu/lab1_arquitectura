@@ -23,11 +23,7 @@ constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 
-// TODO:
-//  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
-//  - clang-tidy
-
-
+/********************************************* RESIZE AOS *********************************************/
 void modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels, std::vector<uint8_t>& output ,PPMHeader header, u_int32_t antiguoNivel){
     Color aux;
     for(const auto& pixel : inputPixels){
