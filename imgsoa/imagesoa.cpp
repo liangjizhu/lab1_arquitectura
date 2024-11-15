@@ -30,6 +30,9 @@ constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
 constexpr int MASK = 0xFF;
 
 /********************************************* COMPRESS SOA *********************************************/
+
+
+/********************************************* COMPRESS SOA *********************************************/
 // Crea un índice de colores único a partir de los canales de color
 std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable) {
 
