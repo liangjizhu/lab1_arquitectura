@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <stdexcept>
 #include <iostream>
-
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr size_t RESIZE_ARGUMENT_COUNT = 6;
 constexpr size_t MAX_LEVEL_ARGUMENT_COUNT = 5;

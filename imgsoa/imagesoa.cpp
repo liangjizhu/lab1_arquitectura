@@ -25,6 +25,10 @@ constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 
+constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
+constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
+constexpr int MASK = 0xFF;
+
 /********************************************* COMPRESS SOA *********************************************/
 // Crea un índice de colores único a partir de los canales de color
 std::unordered_map<std::string, int> buildColorIndex(const ColorChannels& channels, ColorChannels& colorTable) {
@@ -381,8 +385,7 @@ ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight) {
 
 
 
-//************PRUEBAS CON ÁBOLES*************/
-
+/********************************************* CUTFREQ SOA *********************************************/
 //NOLINTBEGIN(misc-no-recursion)
 void readImageAndStoreChannels(const std::string& inputFile, ColorChannels& colorChannels, std::unordered_map<uint32_t, int, HashColor>& colorFrequency) {
     PPMHeader header{};
@@ -457,9 +460,6 @@ std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontra
     return colores_menos_frecuentes;
 }
 
-constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
-constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
-constexpr int MASK = 0xFF;
 
 void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& replacementMap) {
     // Crear un mapa de búsqueda más eficiente usando un único entero como clave
@@ -503,14 +503,7 @@ void sustituirColoresEnImagen(ColorChannels& colorChannels, const std::unordered
     }
 }
 
-struct KDNode {
-    std::tuple<uint16_t, uint16_t, uint16_t> color;
-    std::unique_ptr<KDNode> left = nullptr;
-    std::unique_ptr<KDNode> right = nullptr;
 
-    KDNode(const std::tuple<uint16_t, uint16_t, uint16_t>& color)
-        : color(color) {}
-};
 
 // Construcción balanceada del árbol KD
 std::unique_ptr<KDNode> construirKDTree(std::vector<std::tuple<uint16_t, uint16_t, uint16_t>>& colors, int depth = 0) {
@@ -551,16 +544,6 @@ double calcularDistanciaCuadrada(const std::tuple<uint16_t, uint16_t, uint16_t>&
            std::pow(std::get<1>(color1) - std::get<1>(color2), 2) +
            std::pow(std::get<2>(color1) - std::get<2>(color2), 2);
 }
-
-
-struct BusquedaVecino {
-    std::tuple<uint16_t, uint16_t, uint16_t> color;  // El color que estamos buscando
-    double minDistanciaCuadrada;                     // La distancia mínima encontrada hasta ahora
-    std::tuple<uint16_t, uint16_t, uint16_t> mejorColor;  // El mejor color encontrado hasta ahora
-
-    BusquedaVecino(const std::tuple<uint16_t, uint16_t, uint16_t>& col)
-        : color(col), minDistanciaCuadrada(std::numeric_limits<double>::infinity()) {}
-};
 
 void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, int depth = 0) {
     if (root == nullptr){
@@ -603,7 +586,6 @@ void buscarVecinoMasCercanoOptimizado(KDNode* root, BusquedaVecino& busqueda, in
     }
 }
 
-
 void writePPM(const std::string& outputFile, const PPMHeader& header, const ColorChannels& colorChannels) {
     std::ofstream outFile(outputFile, std::ios::binary);
     if (!outFile.is_open()) {
@@ -643,12 +625,6 @@ void writePPM(const std::string& outputFile, const PPMHeader& header, const Colo
     outFile.flush();
     std::cout << "Imagen procesada escrita en: " << outputFile << '\n';
 }
-
-// Definir constantes para los desplazamientos y la máscara
-/*constexpr int SHIFT_RED = 16;
-constexpr int SHIFT_GREEN = 8;
-constexpr int MASK = 0xFF;*/
-
 
 std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple> encontrarColoresReemplazo(
     const std::unordered_set<std::tuple<uint16_t, uint16_t, uint16_t>, HashTuple>& colorsToRemoveSet,
@@ -693,8 +669,6 @@ std::unordered_map<std::tuple<uint16_t, uint16_t, uint16_t>, std::tuple<uint16_t
     return replacementMap; // Devolvemos el mapa de reemplazo de colores.
 }
 
-
-
 void processCutfreq(const std::string& inputFile, int numColors, const std::string& outputFile) {
     PPMHeader header{};
     if (!readPPMHeader(inputFile, header)) {
@@ -735,6 +709,6 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
     readImageAndStoreChannels(outputFile, colorChannels2, colorFrequency2);
     std::cout << "Colores únicos al final: " << colorFrequency2.size() << '\n';
 }
-
-//se quedó pillado el push
 //NOLINTEND(misc-no-recursion)
+/********************************************************************************************************/
+
