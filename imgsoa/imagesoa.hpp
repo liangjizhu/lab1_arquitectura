@@ -96,5 +96,24 @@ struct ImageSOA {
 
 ImageSOA resizeImageSOA(const ImageSOA& image, int newWidth, int newHeight);
 
+namespace imgsoa {
+
+  // Strongly typed wrappers for input and output file paths
+  struct ImgSOAInputFile {
+    std::string path;
+  };
+
+  struct ImgSOAOutputFile {
+    std::string path;
+  };
+
+  struct FilePaths {
+    std::string inputFile;
+    std::string outputFile;
+  };
+  // Declare resizeAndSaveImage in the header file
+  bool resizeAndSaveImage(const FilePaths& filePaths, int newWidth, int newHeight);
+
+}  // namespace imgsoa
 
 #endif // IMAGESOA_HPP

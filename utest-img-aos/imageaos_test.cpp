@@ -1,5 +1,6 @@
 #include "imgaos/imageaos.hpp"
 #include "common/imageinfo.hpp"
+#include "common/interpolation.hpp"
 #include "imgaos/color.hpp"
 #include <gtest/gtest.h>
 #include <vector>
@@ -224,3 +225,101 @@ TEST(CutFreqTests, TestPrepareRemainingColors) {
 // TODO
 // MAX LEVEL
 // ARGS RESIZE
+TEST(VectorToImageTest, ConvertsDataToImageSuccessfully) {
+    // Sample 3x3 image data, RGB channels
+    std::vector<uint8_t> data = {255, 0, 0, 0, 255, 0, 0, 0, 255,
+                                 255, 255, 0, 0, 255, 255, 255, 0, 255,
+                                 100, 150, 200, 50, 25, 75, 125, 175, 50};
+    int width = 3;
+    int height = 3;
+    int channels = 3;
+
+    Image image = vectorToImage(data, width, height, channels);
+
+    // Check if dimensions match
+    ASSERT_EQ(image.size(), height);
+    ASSERT_EQ(image[0].size(), width);
+
+    // Check specific pixel values
+    EXPECT_EQ(image[0][0].r, 255);
+    EXPECT_EQ(image[0][1].g, 255);
+    EXPECT_EQ(image[2][2].b, 50);
+}
+
+TEST(ImageToVectorTest, ConvertsImageToVectorSuccessfully) {
+    // Create a 2x2 image
+    Image image = {
+        {{255, 0, 0}, {0, 255, 0}},
+        {{0, 0, 255}, {100, 150, 200}}
+    };
+    int channels = 3;
+
+    std::vector<uint8_t> data = imageToVector(image, channels);
+
+    // Expected flat data representation
+    std::vector<uint8_t> expectedData = {255, 0, 0, 0, 255, 0, 0, 0, 255, 100, 150, 200};
+    ASSERT_EQ(data, expectedData);
+}
+
+TEST(ResizeImageAoSTest, ResizesImageDownscalingSuccessfully) {
+    // Create a simple 3x3 image
+      Image image = {
+          {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}},
+          {{255, 255, 0}, {0, 255, 255}, {255, 0, 255}},
+          {{100, 150, 200}, {50, 25, 75}, {125, 175, 50}}
+      };
+    int newWidth = 2;
+    int newHeight = 2;
+
+    Image resizedImage = resizeImageAoS(image, newWidth, newHeight);
+
+    // Check if dimensions match
+    ASSERT_EQ(resizedImage.size(), newHeight);
+    ASSERT_EQ(resizedImage[0].size(), newWidth);
+
+    // Verify expected pixel values through interpolation
+    EXPECT_EQ(resizedImage[0][0].r, interpolateChannel(255, 255, 255, 255, 0, 0)); // Should expect 152
+
+}
+
+TEST(ResizeImageAoSTest, ResizesImageUpscalingSuccessfully) {
+    // Create a simple 2x2 image
+    Image image = {
+        {{255, 0, 0}, {0, 255, 0}},
+        {{0, 0, 255}, {100, 150, 200}}
+    };
+    int newWidth = 3;
+    int newHeight = 3;
+
+    Image resizedImage = resizeImageAoS(image, newWidth, newHeight);
+
+    // Check if dimensions match
+    ASSERT_EQ(resizedImage.size(), newHeight);
+    ASSERT_EQ(resizedImage[0].size(), newWidth);
+
+    // Check that center pixel is an interpolated blend of the original corners
+    EXPECT_EQ(resizedImage[1][1].r, interpolateChannel(255, 0, 0, 100, 0.5, 0.5));
+    EXPECT_EQ(resizedImage[1][1].g, interpolateChannel(0, 255, 0, 150, 0.5, 0.5));
+    EXPECT_EQ(resizedImage[1][1].b, interpolateChannel(0, 0, 255, 200, 0.5, 0.5));
+}
+
+TEST(InterpolatePixelTest, InterpolatesColorsCorrectly) {
+    Pixel topLeft = {255, 0, 0};
+    Pixel topRight = {0, 255, 0};
+    Pixel bottomLeft = {0, 0, 255};
+    Pixel bottomRight = {100, 150, 200};
+
+    Pixel interpolated = interpolatePixel(topLeft, topRight, bottomLeft, bottomRight, 0.5, 0.5);
+
+    // Verify interpolated values for each channel
+    EXPECT_EQ(interpolated.r, interpolateChannel(255, 0, 0, 100, 0.5, 0.5));
+    EXPECT_EQ(interpolated.g, interpolateChannel(0, 255, 0, 150, 0.5, 0.5));
+    EXPECT_EQ(interpolated.b, interpolateChannel(0, 0, 255, 200, 0.5, 0.5));
+}
+
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+// ARGS CUTFREQ
