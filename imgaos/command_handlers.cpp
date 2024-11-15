@@ -32,7 +32,7 @@ int handleMaxLevel(const ProgramArgs& args) {
     processMaxLevel(paths.value(), static_cast<uint16_t>(args.getMaxLevel()));
     auto end = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Image resized and saved to " << args.getOutputFile() << '\n';
+    std::cout << "Imagen cambiada de intensidad y guardada " << args.getOutputFile() << '\n';
     end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> const duration = end - start;
     std::cout << "Time taken: " << duration.count() << " seconds\n";
