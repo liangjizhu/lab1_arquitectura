@@ -29,8 +29,52 @@ constexpr int SHIFT_RED = 16;     // Desplazamiento para el canal rojo
 constexpr int SHIFT_GREEN = 8;    // Desplazamiento para el canal verde
 constexpr int MASK = 0xFF;
 
-/********************************************* COMPRESS SOA *********************************************/
+/********************************************* MAX LEVEL SOA *********************************************/
+void modifyMaxLevelInputChannels(ColorChannels imageChannels, std::vector<uint8_t>& outputBytes, PPMHeader header, uint32_t antiguoNivel){
+    ColorChannels channels(static_cast<size_t>(header.width) * static_cast<size_t>(header.height));
 
+    // Obtener referencias directas a los canales para evitar llamadas a métodos
+    auto& reds = imageChannels.getRedChannel();
+    auto& greens = imageChannels.getGreenChannel();
+    auto& blues = imageChannels.getBlueChannel();
+    const size_t totalPixels = imageChannels.size();
+
+    // Iterar los canales
+    for (size_t i = 0; i < totalPixels; ++i) {
+      reds[i] = static_cast<uint16_t>(uint32_t(reds[i]) * header.maxColorValue / antiguoNivel);
+      greens[i] = static_cast<uint16_t>(uint32_t(greens[i]) * header.maxColorValue / antiguoNivel);
+      blues[i] = static_cast<uint16_t>(uint32_t(blues[i]) * header.maxColorValue / antiguoNivel);
+    }
+
+    // Escribir en binario el contenido de los channels
+    imageChannels.writeToBinary(outputBytes, header);
+}
+void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
+  // Leer los datos binarios del archivo de entrada
+    const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
+    if (fileData.empty()) {
+      std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << paths.inputFile << '\n';
+      return;
+    }
+    // Leer el encabezado del archivo PPM
+    PPMHeader header{};
+    if (!readPPMHeader(paths.inputFile, header)) {
+      std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
+      return;
+    }
+    // Crear objeto ColorChannels para manejar los canales
+    ColorChannels channels(static_cast<size_t>(header.width) * static_cast<size_t>(header.height));
+    channels.extractFromBinary(fileData, header);
+    uint32_t antiguoNivel = header.maxColorValue;
+    header.maxColorValue = maxLevel;
+    std::vector<uint8_t> outputBytes;
+
+    // Extraer los canales de la imagen a partir de los datos binarios
+    modifyMaxLevelInputChannels(channels, outputBytes, header, antiguoNivel);
+
+    // Escribir
+    writePPM(paths.outputFile, outputBytes, header.width, header.height);
+}
 
 /********************************************* COMPRESS SOA *********************************************/
 // Crea un índice de colores único a partir de los canales de color
