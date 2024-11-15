@@ -104,7 +104,7 @@ TEST(ImageSoATest, AppendColorTableSoA) {
     colorTable.getBlueChannel() = {MID_COLOR_VALUE_8BIT, LOW_COLOR_VALUE_8BIT};
 
     std::vector<uint8_t> compressedData;
-    PPMHeader const header{2, 2, MAX_COLOR_8BIT};
+    constexpr PPMHeader header{2, 2, MAX_COLOR_8BIT};
     appendColorTableSoA(compressedData, colorTable, header);
 
     ASSERT_EQ(compressedData.size(), 6);

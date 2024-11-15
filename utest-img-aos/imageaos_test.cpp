@@ -137,9 +137,9 @@ TEST(ImageAosTest, CompressAoS) {
 // Prueba para `encontrar_colores_menos_frecuentes`
 TEST(CutFreqTests, TestMenosFrecuentes) {
     std::unordered_map<Color, int, HashColor> colorFrequency;
-    colorFrequency[Color(RGBColor{10, 20, 30})] = 5;
-    colorFrequency[Color(RGBColor{40, 50, 60})] = 10;
-    colorFrequency[Color(RGBColor{70, 80, 90})] = 1;
+    colorFrequency[Color(RGBColor{10, 20, 30})] = 5; // NOLINT(*-avoid-magic-numbers)
+    colorFrequency[Color(RGBColor{40, 50, 60})] = 10; // NOLINT(*-avoid-magic-numbers)
+    colorFrequency[Color(RGBColor{70, 80, 90})] = 1; // NOLINT(*-avoid-magic-numbers)
 
     auto menosFrecuentes = encontrar_colores_menos_frecuentes(colorFrequency, 2);
 
@@ -151,9 +151,9 @@ TEST(CutFreqTests, TestMenosFrecuentes) {
 // Prueba para `construirKDTree`
 TEST(CutFreqTests, TestConstruirKDTree) {
     std::vector<Color> colores = {
-        Color(RGBColor{10, 20, 30}),
-        Color(RGBColor{40, 50, 60}),
-        Color(RGBColor{70, 80, 90})
+        Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
     };
 
     auto kdTreeRoot = construirKDTree(colores, 0);
@@ -167,12 +167,12 @@ TEST(CutFreqTests, TestConstruirKDTree) {
 // Prueba para `buscarVecinoMasCercano`
 TEST(CutFreqTests, TestBuscarVecinoMasCercano) {
     std::vector<Color> colores = {
-        Color(RGBColor{10, 20, 30}),
-        Color(RGBColor{40, 50, 60}),
-        Color(RGBColor{70, 80, 90})
+        Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
     };
     auto kdTreeRoot = construirKDTree(colores, 0);
-    Color target(RGBColor{15, 25, 35});
+    Color const target(RGBColor{15, 25, 35});
 
     auto [mejorColor, distancia] = buscarVecinoMasCercano(kdTreeRoot, target, 0);
 
@@ -182,16 +182,16 @@ TEST(CutFreqTests, TestBuscarVecinoMasCercano) {
 // Prueba para `substituteColors`
 TEST(CutFreqTests, TestSubstituteColors) {
     std::vector<Color> pixels = {
-        Color(RGBColor{10, 20, 30}),
-        Color(RGBColor{40, 50, 60}),
-        Color(RGBColor{70, 80, 90}),
-        Color(RGBColor{10, 20, 30})
+        Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{10, 20, 30}) // NOLINT(*-avoid-magic-numbers)
     };
-    std::vector<Color> menosFrecuentes = {Color(RGBColor{10, 20, 30})};
+    std::vector<Color> const menosFrecuentes = {Color(RGBColor{10, 20, 30})};
 
     std::vector<Color> remainingColors = {
-        Color(RGBColor{40, 50, 60}),
-        Color(RGBColor{70, 80, 90})
+        Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
     };
     auto kdTreeRoot = construirKDTree(remainingColors, 0);
 
@@ -205,14 +205,14 @@ TEST(CutFreqTests, TestSubstituteColors) {
 
 TEST(CutFreqTests, TestPrepareRemainingColors) {
     ImageData data;
-    data.colorCount.resize(256 * 256 * 256, 0); // Inicializar el tamaño para colores de 8 bits
+    data.colorCount.resize(256 * 256 * 256, 0); // Inicializar el tamaño para colores de 8 bits NOLINT(*-implicit-widening-of-multiplication-result)
 
     data.uniqueColors = {
-      Color(RGBColor{10, 20, 30}),
-      Color(RGBColor{40, 50, 60}),
-      Color(RGBColor{70, 80, 90})
+      Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+      Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+      Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
     };
-    std::vector<Color> menosFrecuentes = {Color(RGBColor{10, 20, 30})};
+    std::vector<Color> const menosFrecuentes = {Color(RGBColor{10, 20, 30})};
 
     auto remainingColors = prepareRemainingColors(data, menosFrecuentes);
 
