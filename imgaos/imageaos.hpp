@@ -64,10 +64,6 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
 
 std::vector<Color> readPixelsFromImage(const std::string& inputFile, int width, int height);
 
-// Función para sustituir los colores menos frecuentes
-void substituteColors(std::vector<Color>& pixels,
-                     const std::vector<Color>& menosFrecuentes,
-                     std::unique_ptr<KDNode>& kdTreeRoot);
 struct ImageData {
     std::vector<Color> pixels;
     std::vector<Color> uniqueColors;

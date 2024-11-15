@@ -17,10 +17,10 @@ struct ScaleRatios {
 };
 
 // Function to calculate weights based on source coordinates
-std::pair<float, float> calculateWeights(float srcX, float srcY, size_t lowerX, size_t lowerY);
+std::pair<float, float> calculateWeights(float sourceX, float sourceY, size_t lowerXCoord, size_t lowerYCoord);
 
 // Function to compute source coordinates using target coordinates and scaling ratios
-std::pair<float, float> computeSourceCoordinates(int targetX, int targetY, const ScaleRatios& ratios);
+std::pair<float, float> computeSourceCoordinates(int targetXCoord, int targetYCoord, const ScaleRatios& ratios);
 
 // Helper function to interpolate a single color channel
 uint8_t interpolateChannel(uint8_t topLeft, uint8_t topRight, uint8_t bottomLeft, uint8_t bottomRight, float xWeight, float yWeight);
@@ -28,15 +28,13 @@ uint8_t interpolateChannel(uint8_t topLeft, uint8_t topRight, uint8_t bottomLeft
 // Main function to interpolate the pixel
 Pixel interpolatePixel(const Pixel& topLeft, const Pixel& topRight, const Pixel& bottomLeft, const Pixel& bottomRight, float xWeight, float yWeight);
 
-// interpolation.hpp
+// Direct interpolation function for a pixel
 Pixel interpolatePixelDirect(const Pixel& topLeft, const Pixel& topRight,
                              const Pixel& bottomLeft, const Pixel& bottomRight,
-                             float origX, float origY, size_t xl, size_t yl);
+                             float originalX, float originalY, size_t lowerXCoord, size_t lowerYCoord);
 
-
-// interpolation.hpp
-uint8_t interpolateChannelDirect(uint8_t p1, uint8_t p2, uint8_t p3, uint8_t p4,
-                                 float origX, float origY, size_t xl, size_t yl);
-
+// Direct interpolation function for a single color channel
+uint8_t interpolateChannelDirect(uint8_t topLeft, uint8_t topRight, uint8_t bottomLeft, uint8_t bottomRight,
+                                 float originalX, float originalY, size_t lowerXCoord, size_t lowerYCoord);
 
 #endif // INTERPOLATION_HPP
