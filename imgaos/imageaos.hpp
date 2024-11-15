@@ -93,6 +93,36 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
 struct Pixel {
   uint8_t r, g, b;
 };
+
+struct Coordinate {
+  float x;
+  float y;
+};
+
+struct TargetCoordinates {
+  int x;
+  int y;
+};
+
+struct InterpolationChannelParams {
+  uint8_t topLeft;
+  uint8_t topRight;
+  uint8_t bottomLeft;
+  uint8_t bottomRight;
+  float xWeight;
+  float yWeight;
+};
+
+struct InterpolationPixelParams {
+  Pixel topLeft;
+  Pixel topRight;
+  Pixel bottomLeft;
+  Pixel bottomRight;
+  float xWeight;
+  float yWeight;
+};
+
+
 using Image = std::vector<std::vector<Pixel>>;
 
 // Function declarations
@@ -100,6 +130,9 @@ Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int
 std::vector<uint8_t> imageToVector(const Image& image, int channels);
 Image resizeImageAoS(const Image& image, int newWidth, int newHeight);
 Image loadPPM(const std::string& filename);
+struct ScaleRatios {
+  float xRatio; float yRatio;
+};
 
 class ImageAOS {
     public:
@@ -112,6 +145,5 @@ class ImageAOS {
     int height;
     std::vector<uint8_t> pixels; // Almacena los píxeles en formato RGB
 };
-
 
 #endif // IMAGEAOS_HPP

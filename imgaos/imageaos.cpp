@@ -4,8 +4,6 @@
 #include "progargs.hpp"
 #include "imageinfo.hpp"
 #include "color.hpp"
-#include "interpolation.hpp"
-
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -223,13 +221,87 @@ std::vector<uint8_t> imageToVector(const Image& image, int channels) {
   return data;
 }
 
+namespace {
+  // Function to calculate weights for x and y based on the source and lower coordinates
+  [[maybe_unused]] std::pair<float, float> calculateWeights(const Coordinate& sourceCoord, const Coordinate& lowerCoord) {
+    float xWeight = sourceCoord.x - lowerCoord.x;
+    float yWeight = sourceCoord.y - lowerCoord.y;
+
+    // Clamp weights within the valid range
+    xWeight = std::clamp(xWeight, 0.0F, 1.0F);
+    yWeight = std::clamp(yWeight, 0.0F, 1.0F);
+
+    return {xWeight, yWeight};
+  }
+} // end of anonymous namespace
+
+
+namespace {
+  [[maybe_unused]] std::pair<float, float> computeSourceCoordinates(const TargetCoordinates& targetCoords, const ScaleRatios& ratios) {
+    float const sourceX = ((static_cast<float>(targetCoords.x) + 0.5F) * ratios.xRatio) - 0.5F;
+    float const sourceY = ((static_cast<float>(targetCoords.y) + 0.5F) * ratios.yRatio) - 0.5F;
+    return {sourceX, sourceY};
+  }
+}
+
+
+namespace {
+  [[maybe_unused]]uint8_t interpolateChannel(const InterpolationChannelParams& params) {
+    // Calculate horizontal interpolations with explicit conversions
+    float const topInterpolation = static_cast<float>(params.topLeft) +
+        (params.xWeight * (static_cast<float>(params.topRight) - static_cast<float>(params.topLeft)));
+    float const bottomInterpolation = static_cast<float>(params.bottomLeft) +
+        (params.xWeight * (static_cast<float>(params.bottomRight) - static_cast<float>(params.bottomLeft)));
+
+    // Vertical interpolation
+    return static_cast<uint8_t>(topInterpolation + (params.yWeight * (bottomInterpolation - topInterpolation)));
+  }
+}
+
+namespace {
+  [[maybe_unused]] Pixel interpolatePixel(const InterpolationPixelParams& params) {
+    // Create InterpolationChannelParams for each channel
+    const InterpolationChannelParams redParams = {
+      .topLeft = params.topLeft.r,
+      .topRight = params.topRight.r,
+      .bottomLeft = params.bottomLeft.r,
+      .bottomRight = params.bottomRight.r,
+      .xWeight = params.xWeight,
+      .yWeight = params.yWeight
+  };
+    const InterpolationChannelParams greenParams = {
+      .topLeft = params.topLeft.g,
+      .topRight = params.topRight.g,
+      .bottomLeft = params.bottomLeft.g,
+      .bottomRight = params.bottomRight.g,
+      .xWeight = params.xWeight,
+      .yWeight = params.yWeight
+  };
+    const InterpolationChannelParams blueParams = {
+      .topLeft = params.topLeft.b,
+      .topRight = params.topRight.b,
+      .bottomLeft = params.bottomLeft.b,
+      .bottomRight = params.bottomRight.b,
+      .xWeight = params.xWeight,
+      .yWeight = params.yWeight
+  };
+
+    // Interpolate each channel
+    return Pixel{
+      .r = interpolateChannel(redParams),
+      .g = interpolateChannel(greenParams),
+      .b = interpolateChannel(blueParams)
+  };
+  }
+}
+
 Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
   const size_t originalWidth = image[0].size();
   const size_t originalHeight = image.size();
 
   Image resizedImage(static_cast<size_t>(newHeight), std::vector<Pixel>(static_cast<size_t>(newWidth)));
 
-  // Calcular las proporciones de escalado
+  // Calculate scaling ratios
   const ScaleRatios scaleRatios = {
     .xRatio = static_cast<float>(originalWidth - 1) / static_cast<float>(newWidth - 1),
     .yRatio = static_cast<float>(originalHeight - 1) / static_cast<float>(newHeight - 1)
@@ -237,28 +309,34 @@ Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
 
   for (size_t rowIndex = 0; rowIndex < static_cast<size_t>(newHeight); ++rowIndex) {
     for (size_t colIndex = 0; colIndex < static_cast<size_t>(newWidth); ++colIndex) {
-      // Calcular coordenadas originales reales
+      // Calculate real original coordinates
       const float origX = static_cast<float>(colIndex) * scaleRatios.xRatio;
       const float origY = static_cast<float>(rowIndex) * scaleRatios.yRatio;
 
-      // Determinar píxeles vecinos más cercanos
+      // Determine nearest neighbor pixels
       auto lowerX = static_cast<size_t>(std::floor(origX));
       auto lowerY = static_cast<size_t>(std::floor(origY));
       auto upperX = std::min(lowerX + 1, originalWidth - 1);
       auto upperY = std::min(lowerY + 1, originalHeight - 1);
 
-      // Realizar la interpolación directamente
-      resizedImage[rowIndex][colIndex] = interpolatePixelDirect(
-          image[lowerY][lowerX], image[lowerY][upperX],
-          image[upperY][lowerX], image[upperY][upperX],
-          origX, origY, lowerX, lowerY
-      );
+      // Prepare params for pixel interpolation
+      const InterpolationPixelParams params = {
+        .topLeft = image[lowerY][lowerX],
+        .topRight = image[lowerY][upperX],
+        .bottomLeft = image[upperY][lowerX],
+        .bottomRight = image[upperY][upperX],
+        .xWeight = origX - float(lowerX),
+        .yWeight = origY - float(lowerY)
+    };
 
+      // Perform pixel interpolation
+      resizedImage[rowIndex][colIndex] = interpolatePixel(params);
     }
   }
 
   return resizedImage;
 }
+
 
 /********************************************************************************************************/
 
