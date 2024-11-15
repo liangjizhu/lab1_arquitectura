@@ -28,58 +28,71 @@ constexpr uint8_t BITS_PER_BYTE = 8;
 //  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
 //  - clang-tidy
 void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
-    int contadorDeLineas = 0;
-    std::string maxIntensidadStr;
-    int maxIntensidadInt = 0;
-    //bool altaIntensidad;
+  std::string buffer    = "";
+  int antiguaIntensidad = 0;
+  int ancho             = 0;
+  int anchoContador     = 0;
+  int contadorDeLineas  = 0;
 
-    //int contador = 0;
-    //int contador_aux = 0;
-    //uint8_t pet[2];
-    //uint16_t caster;
+  // const int maxIntensidadBaja = 256;
+  // int tipoConversion = 0; // Se podría usar 4 bits en vez de 8
 
-    //Leer archivo
-    for (unsigned char & i : inputFile){
-        if (contadorDeLineas < 3){
-            std::cout << i;
+  std::vector<uint8_t> output = {};
+
+  // std::ofstream stream;
+  // stream.open("output1.ppm");
+  std::cout << "\nProcessing 'maxlevel' for file: " << inputFile.size() << " with max level: " << maxLevel << '\n';
+
+  // Leer archivo
+  for (auto i = inputFile.begin(); i != inputFile.end(); ++i) {
+    // Saltos de línea
+    if ((*i == '\n') && ((anchoContador == ancho) || (contadorDeLineas < 3))) {
+      // Añadir al output la nueva instensidad
+      if (contadorDeLineas == 2) {
+        // Extraer antigua intensidad
+        antiguaIntensidad = std::stoi(buffer);
+
+        // if ((antiguaIntensidad < maxIntensidadBaja) && (maxLevel < maxIntensidadBaja))
+
+        buffer = std::to_string(static_cast<int>(maxLevel));
+        for (auto j = buffer.begin(); j != buffer.end(); ++j) {
+          output.push_back(static_cast<unsigned char>(*j));
         }
+      }
 
-        //Tener en cuenta las líneas (usando los newlines)
-        if (i == '\n'){
-            //Ubicación de máxima intensidad en el archivo ppm
-            if (contadorDeLineas == 2){
-                std::cout << "Máxima intensidad: " << maxIntensidadStr << "\n";
-                maxIntensidadInt  = std::stoi(maxIntensidadStr);
+      // Añadir al output
+      if (contadorDeLineas < 3) { output.push_back(static_cast<unsigned char>(*i)); }
 
-                if (maxIntensidadInt < 256){
-                    std::cout << "Intensidad baja";
-                }
-            }
-            contadorDeLineas++;
-        } else if ((i == ' ') || (i == '\t')){
-            std::cout << "\ndo nothing\n";
-        } else {
-            if (contadorDeLineas == 2) {
-                maxIntensidadStr.append(1, static_cast<char>(i));
-            }
-            //pet[contador] = *i;
-            //if (contadorDeLineas >= 3){
-                //if (contador >= 1){
-                    //caster = (static_cast<u_int16_t>(pet[0]) << 8) | pet[1];
-                    //contador = 0;
-                    //std::cout << "casted: " << caster << "\n";
-                //} else {
-                    //contador++;
-                //}
-            //}
-        }
-        //contador_aux++;
+      // Aumentar contador de líneas
+      contadorDeLineas++;
+
+      // Reseatear buffer
+      buffer = "";
+
+    } else {
+      // Sacar ancho para analizar archivo
+      if (((ancho == 0) && (contadorDeLineas == 1)) || (contadorDeLineas == 2)) {
+        // Checkear si es el fin del ancho
+        if (*i == ' ') { ancho = std::stoi(buffer); }
+
+        // Añadir char al buffer
+        buffer.append(1, static_cast<char>(*i));
+      }
+
+      // Añadir al output
+      if (contadorDeLineas < 2) {
+        output.push_back(static_cast<unsigned char>(*i));
+      } else if (contadorDeLineas > 2) {
+        output.push_back(
+            static_cast<u_int8_t>((static_cast<int>(*i)) * maxLevel / antiguaIntensidad));
+      }
+
+      // Añadir ancho
+      anchoContador++;
     }
+  }
 
-    // Lógica para el comando 'maxlevel'
-    std::cout << "\nProcessing 'maxlevel' for file: " << inputFile.size() << " with max level: " << maxLevel << '\n';
-
-    // Aquí iría la lógica para modificar el nivel máximo del archivo
+  BinaryIO::writeBinaryFile("output.ppm", output);
 }
 
 // TODO
