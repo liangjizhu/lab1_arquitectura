@@ -33,3 +33,5 @@ compress_and_compare() {
 # Ejecutar y comparar para cada imagen
 compress_and_compare "deer-small.ppm" "deer-small"
 compress_and_compare "lake-small.ppm" "lake-small"
+compress_and_compare "lake-large.ppm" "lake-large"
+compress_and_compare "sabatini.ppm" "sabatini"

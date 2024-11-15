@@ -10,12 +10,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <algorithm>
-#include <string>
+
 
 // Constante descriptiva para el tamaño de reserva inicial de la tabla de colores
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
@@ -94,105 +92,6 @@ void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
 
   BinaryIO::writeBinaryFile("output.ppm", output);
 }
-
-// TODO
-// ELIMINACIÓN DE COLORES POCO FRECUENTES
-
-    //ESTAMOS EN AOS -> ARRAY OF STRUCTS
-    // HABRÁ UN ARRAY QUE CONTENGA TODOS LOS PÍXELES, CADA POSICIÓN DEL ARRAY TENDRÁ TRES CAMPOS (R G Y B)
-    //PSEUDOCODE
-    //RECIBE UN ARGUMENTO:
-        //Número entero positivo -> Número de colores que hay que eliminar
-    //PASOS A SEGUIR:
-        //1.- DETERMINAR LA FRECUENCIA ABSOLUTA DE CADA COLOR
-        //2.- ELIGE LOS QUE APAREZCAN MENOS VECES
-            //Si hay empate
-                //Eliminar primero valor mayor en componente b
-                //Luego los de mayor valor en componente g
-                //Finalmente los de mayor valor en componente r
-        //3.- CALCULAR DISTANCIA EUCLÍDEA CON LOS DEMÁS COLORES
-        //4.- SUSTITUCIÓN
-
-//VOY A IMAGINAR QUE HAY UN STRUCT PARA CADA COLOR (lo voy a llamar Color)
-//Y UN VECTOR LLAMADO ArrayOfColors QUE CONTIENE TODOS LOS COLORES DE LA IMAGEN
-
-
-// ******* COLOR IMPLEMENTADO EN COLOR.HPP *******
-//FUNCIÓN PARA CALCULAR LA DISTANCIA EUCLÍDEA
-// double distancia_euclidiana(const Color& c1, const Color& c2) {
-//     return std::sqrt(std::pow(c1.red - c2.red, 2) +
-//                      std::pow(c1.green - c2.green, 2) +
-//                      std::pow(c1.blue - c2.blue, 2));
-// }
-
-
-//FUNCIÓN PARA CONTAR LA FRECUENCIA DE CADA COLOR
-//Un unordered_map es como un diccionario pero su tiempo de búsqueda es O(1), y si se repite la clave, se sobreescribe
-//Paso el vector por referencia para no hacer una copia y así ser más eficiente
-// std::unordered_map<Color, int> contar_frecuencia(const std::vector<Color>& pixeles) {
-//
-//     std::unordered_map<Color, int> frecuencia;
-//
-//     for (const auto& pixel : pixeles) {
-//         frecuencia[pixel]++;
-//     }
-//
-//     return frecuencia;
-// }
-
-// FUNCIÓN PARA ENCONTRAR LOS COLORES MENOS FRECUENTES
-// Para encontrar los colores menos frecuentes necesitamos que el unordered map pase a ser un vector
-// de pares, ya que los vectores son ordenables Ordenaremos el vector de menor a mayor frecuencia y
-// seleccionaremos los primeros 'n' colores
-
-//Toma como parámetro de entrada el unordered map (llamado frecuencia) y el número de colores a seleccionar, y retorna el vector de los n colores menos frecuentes
-
-// std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int>& frecuencia, long unsigned int n) {
-//
-//     // Convertir el unordered_map en un vector de pares (color, frecuencia)
-//     std::vector<std::pair<Color, int>> colores_frecuentes(frecuencia.begin(), frecuencia.end());
-//
-//     // Ordenar por frecuencia ascendente
-//     //sort es parte de <include algorithm>
-//     std::sort(colores_frecuentes.begin(), colores_frecuentes.end(),
-//         [](const auto& a, const auto& b) {
-//             return a.second < b.second; // Comparar por la frecuencia (segundo elemento del par)
-//         }
-//     );
-//
-//     // Seleccionar los primeros 'n' colores menos frecuentes
-//     //Creamos un vector vacío de colores
-//     //Metemos en el vector vacío los 'n' primeros colores menos frecuentes
-//     std::vector<Color> menos_frecuentes;
-//     for (size_t i = 0; i < static_cast<size_t>(n) && i < colores_frecuentes.size(); ++i) {
-//       menos_frecuentes.push_back(colores_frecuentes[i].first);
-//     }
-//
-//
-//     return menos_frecuentes;
-// }
-
-// void distancias_euclideas(std::vector<Color>& menos_frecuentes, std::vector<Color>& pixeles) {
-// Calcular la distancia euclídea con los demás colores
-// for (const auto& pixel : pixeles) {
-//    for (const auto& color : menos_frecuentes) {
-// double distancia = distancia_euclidiana(pixel, color);
-// Hacer algo con la distancia
-// }
-// }
-// }
-
-// void processCutfreq(int numColors, std::vector<Color>& pixeles) {
-////Determinar la frecuencia absoluta de cada color
-// std::unordered_map<Color, int> frecuencia;
-// frecuencia = contar_frecuencia(pixeles);
-
-////Encontrar los colores menos frecuentes y ordenarlos
-// std::vector<Color> menos_frecuentes;
-// menos_frecuentes = encontrar_colores_menos_frecuentes(frecuencia, numColors);
-
-////Calcular la distancia euclídea con los demás colores
-//}
 
 /********************************************* COMPRESS AOS *********************************************/
 // Extraer los píxeles de la imagen a partir de los datos binarios (fileData)
@@ -315,8 +214,9 @@ void compressAoS(const FilePaths& paths) {
     // Escribir los datos comprimidos en el archivo de salida
     BinaryIO::writeBinaryFile(outputFile, compressedData);
 }
+/********************************************************************************************************/
 
-// RESIZE AOS
+/********************************************* RESIZE AOS *********************************************/
 Image vectorToImage(const std::vector<uint8_t>& data, int width, int height, int channels) {
   if (data.size() != static_cast<size_t>(width) * static_cast<size_t>(height) * static_cast<size_t>(channels)) {
     throw std::runtime_error("Data size does not match width, height, and channels.");
@@ -444,15 +344,9 @@ Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
   return resizedImage;
 }
 
+/********************************************************************************************************/
 
-//PRUEBAS CON KTREES
-//*******************PROCESSCUTFREQ**********************
-//Toma como parámetro de entrada el unordered map (llamado frecuencia) y el número de colores a seleccionar, y retorna el vector de los n colores menos frecuentes
-
-//NOLINTBEGIN(misc-no-recursion)
-//const int MAX_COLOR_VALUE = 255;
-
-
+/********************************************* CUTFREQ AOS *********************************************/
 std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int, HashColor>& frecuencia, int n) {
 
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
@@ -548,21 +442,6 @@ std::tuple<int, int> getPPMDimensions(const std::string& inputFile) {
     return {width, height}; // Retornar ancho y alto
 }
 
-struct KDNode {
-    Color color;
-    std::unique_ptr<KDNode> left;  // Cambiado a std::unique_ptr
-    std::unique_ptr<KDNode> right; // Cambiado a std::unique_ptr
-    KDNode(Color color) : color(color), left(nullptr), right(nullptr) {}
-};
-
-
-// Función de distancia euclidiana
-/*double distancia_euclidiana(const Color& c1, const Color& c2) {
-    return std::sqrt(std::pow(c1.red - c2.red, 2) +
-                     std::pow(c1.green - c2.green, 2) +
-                     std::pow(c1.blue - c2.blue, 2));
-}*/
-
 // Construcción del K-D Tree en 3 dimensiones (RGB)
 std::unique_ptr<KDNode> construirKDTree(std::vector<Color>& colores, int depth = 0) {
     if (colores.empty()){
@@ -651,7 +530,6 @@ std::pair<Color, double> buscarVecinoMasCercano(std::unique_ptr<KDNode>& root, c
     return {mejorColor, mejorDistanciaCuadrada};
 }
 
-
 // Función para encontrar el color más cercano para una lista de colores menos frecuentes
 std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const std::vector<Color>& coloresMenosFrecuentes) {
     std::vector<Color> coloresCercanos;
@@ -704,34 +582,6 @@ std::vector<Color> readPixelsFromImage(const std::string& inputFile, int width, 
     std::cout << "Píxeles leídos" << '\n';
     return pixelList;
 }
-
-/*std::unordered_map<Color, int> calculateColorFrequency(const std::vector<Color>& pixelList) {
-    std::cout << "Calculando frecuencias de colores" << '\n';
-    std::unordered_map<Color, int> colorFrequency;
-
-    // Reservar espacio para evitar realocaciones innecesarias
-    colorFrequency.reserve(100000);  // Ajusta este número según tus expectativas
-
-    // Usamos try_emplace para evitar búsquedas duplicadas
-    for (const auto& color : pixelList) {
-        colorFrequency.try_emplace(color, 0).first->second++;
-    }
-
-    return colorFrequency;
-}*/
-
-/*std::pair<std::vector<Color>, std::unordered_map<Color, int>> readImageAndStoreColorsTrial(const std::string& inputFile, int width, int height) {
-    std::vector<Color> pixelList = readPixelsFromImage(inputFile, width, height);
-    std::unordered_map<Color, int> colorFrequency = calculateColorFrequency(pixelList);
-    return {pixelList, colorFrequency};
-}*/
-struct ImageData {
-    std::vector<Color> pixels;
-    std::vector<Color> uniqueColors;
-    std::vector<int> colorCount;
-    int width = 0;
-    int height = 0;
-};
 
 // Función para cargar y preparar los datos de la imagen
 ImageData loadImageData(const std::string& inputFile) {
@@ -899,4 +749,5 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
         std::cerr << "Error durante el procesamiento: " << e.what() << '\n';
     }
 }
+/********************************************************************************************************/
 //NOLINTEND(misc-no-recursion)

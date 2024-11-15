@@ -10,7 +10,7 @@
 // Constantes descriptivas
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;  // Valor máximo para un color de 8 bits
 
-// COMPRESS
+/********************************************* COMPRESS AOS *********************************************/
 // Caso de prueba para `extractImagePixels`
 TEST(ImageAosTest, ExtractImagePixels_8Bit) {
     constexpr PPMHeader header{2, 2, MAX_COLOR_VALUE_8BIT};
@@ -130,7 +130,97 @@ TEST(ImageAosTest, CompressAoS) {
     int const removeOutput = std::remove(outputFilename.c_str());
     EXPECT_EQ(removeOutput, 0);
 }
+/********************************************************************************************************/
+
+/********************************************* CUTFREQ AOS *********************************************/
+// Prueba para `encontrar_colores_menos_frecuentes`
+TEST(CutFreqTests, TestMenosFrecuentes) {
+    std::unordered_map<Color, int, HashColor> colorFrequency;
+    colorFrequency[Color(RGBColor{10, 20, 30})] = 5;
+    colorFrequency[Color(RGBColor{40, 50, 60})] = 10;
+    colorFrequency[Color(RGBColor{70, 80, 90})] = 1;
+
+    auto menosFrecuentes = encontrar_colores_menos_frecuentes(colorFrequency, 2);
+
+    ASSERT_EQ(menosFrecuentes.size(), 2);
+    EXPECT_EQ(menosFrecuentes[0], Color(RGBColor{70, 80, 90}));
+    EXPECT_EQ(menosFrecuentes[1], Color(RGBColor{10, 20, 30}));
+}
+
+// Prueba para `construirKDTree`
+TEST(CutFreqTests, TestConstruirKDTree) {
+    std::vector<Color> colores = {
+        Color(RGBColor{10, 20, 30}),
+        Color(RGBColor{40, 50, 60}),
+        Color(RGBColor{70, 80, 90})
+    };
+
+    auto kdTreeRoot = construirKDTree(colores, 0);
+
+    ASSERT_NE(kdTreeRoot, nullptr);
+    EXPECT_EQ(kdTreeRoot->color, Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(kdTreeRoot->left->color, Color(RGBColor{10, 20, 30}));
+    EXPECT_EQ(kdTreeRoot->right->color, Color(RGBColor{70, 80, 90}));
+}
+
+// Prueba para `buscarVecinoMasCercano`
+TEST(CutFreqTests, TestBuscarVecinoMasCercano) {
+    std::vector<Color> colores = {
+        Color(RGBColor{10, 20, 30}),
+        Color(RGBColor{40, 50, 60}),
+        Color(RGBColor{70, 80, 90})
+    };
+    auto kdTreeRoot = construirKDTree(colores, 0);
+    Color target(RGBColor{15, 25, 35});
+
+    auto [mejorColor, distancia] = buscarVecinoMasCercano(kdTreeRoot, target, 0);
+
+    EXPECT_EQ(mejorColor, Color(RGBColor{10, 20, 30}));
+}
+
+// Prueba para `substituteColors`
+TEST(CutFreqTests, TestSubstituteColors) {
+    std::vector<Color> pixels = {
+        Color(RGBColor{10, 20, 30}),
+        Color(RGBColor{40, 50, 60}),
+        Color(RGBColor{70, 80, 90}),
+        Color(RGBColor{10, 20, 30})
+    };
+    std::vector<Color> menosFrecuentes = {Color(RGBColor{10, 20, 30})};
+
+    std::vector<Color> remainingColors = {
+        Color(RGBColor{40, 50, 60}),
+        Color(RGBColor{70, 80, 90})
+    };
+    auto kdTreeRoot = construirKDTree(remainingColors, 0);
+
+    substituteColors(pixels, menosFrecuentes, kdTreeRoot);
+
+    EXPECT_EQ(pixels[0], Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(pixels[1], Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(pixels[2], Color(RGBColor{70, 80, 90}));
+    EXPECT_EQ(pixels[3], Color(RGBColor{40, 50, 60}));
+}
+
+TEST(CutFreqTests, TestPrepareRemainingColors) {
+    ImageData data;
+    data.colorCount.resize(256 * 256 * 256, 0); // Inicializar el tamaño para colores de 8 bits
+
+    data.uniqueColors = {
+      Color(RGBColor{10, 20, 30}),
+      Color(RGBColor{40, 50, 60}),
+      Color(RGBColor{70, 80, 90})
+    };
+    std::vector<Color> menosFrecuentes = {Color(RGBColor{10, 20, 30})};
+
+    auto remainingColors = prepareRemainingColors(data, menosFrecuentes);
+
+    ASSERT_EQ(remainingColors.size(), 2);
+    EXPECT_EQ(remainingColors[0], Color(RGBColor{40, 50, 60}));
+    EXPECT_EQ(remainingColors[1], Color(RGBColor{70, 80, 90}));
+}
+/********************************************************************************************************/
+
 // TODO
 // MAX LEVEL
 // ARGS RESIZE
-// ARGS CUTFREQ
