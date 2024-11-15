@@ -4,8 +4,8 @@ add_library(common
     binaryio.cpp
     imageinfo.cpp
     imageinfo.hpp
-        interpolation.cpp
-        interpolation.hpp
+    interpolation.cpp
+    interpolation.hpp
 )
 
 # Incluir los directorios necesarios para encontrar archivos de encabezado
