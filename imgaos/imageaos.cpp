@@ -22,9 +22,9 @@ constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 
 /********************************************* MAXLEVEL AOS *********************************************/
-std::vector<Color> modifyMaxLevelInputPixels(const std::vector<Color> inputPixels ,PPMHeader header, u_int32_t antiguoNivel){
+std::vector<Color> modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels ,PPMHeader header, u_int32_t antiguoNivel){
     std::vector<Color> res;
-    Color aux;
+    Color aux{};
     for(const auto& pixel : inputPixels){
         // Modificar pixel;
         aux.rgb.red = static_cast<uint16_t>(uint32_t(pixel.rgb.red) * header.maxColorValue / antiguoNivel);
@@ -49,13 +49,13 @@ void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
         std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
         return;
     }
-    std::vector<Color> imagePixels = extractImagePixels(fileData, header);
+    std::vector<Color> const imagePixels = extractImagePixels(fileData, header);
 
-    uint32_t antiguoNivel = header.maxColorValue;
+    uint32_t const antiguoNivel = header.maxColorValue;
     header.maxColorValue = maxLevel;
 
     // Extraer los píxeles de la imagen a partir de los datos binarios
-    std::vector<Color> nuevosColores = modifyMaxLevelInputPixels(imagePixels, header, antiguoNivel);
+    std::vector<Color> const nuevosColores = modifyMaxLevelInputPixels(imagePixels, header, antiguoNivel);
 
     // Escribir
     escribirPPM(paths.outputFile, nuevosColores, header.width, header.height);
@@ -341,6 +341,7 @@ Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
 /********************************************************************************************************/
 
 /********************************************* CUTFREQ AOS *********************************************/
+//NOLINTBEGIN(misc-no-recursion)
 std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int, HashColor>& frecuencia, int n) {
 
     // Convertir el unordered_map en un vector de pares (color, frecuencia)
@@ -742,5 +743,5 @@ void processCutfreq(const std::string& inputFile, int numColors, const std::stri
         std::cerr << "Error durante el procesamiento: " << e.what() << '\n';
     }
 }
-/********************************************************************************************************/
 //NOLINTEND(misc-no-recursion)
+/********************************************************************************************************/

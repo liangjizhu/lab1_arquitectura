@@ -11,7 +11,7 @@
 /********************************************* MAX LEVEL AOS *********************************************/
 
 // Cambiar los colores al cambiar la intensidad de la imagen
-std::vector<Color> modifyMaxLevelInputPixels(const std::vector<Color> inputColores, const uint32_t antiguoMaxLevel, uint16_t maxLevel);
+std::vector<Color> modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels ,PPMHeader header, u_int32_t antiguoNivel);
 
 // Función principal para el escalado de intensidad en formato AOS
 void processMaxLevel(const FilePaths& paths, uint16_t maxLevel);

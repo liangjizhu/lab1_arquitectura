@@ -31,7 +31,7 @@ constexpr int MASK = 0xFF;
 
 /********************************************* MAX LEVEL SOA *********************************************/
 void modifyMaxLevelInputChannels(ColorChannels imageChannels, std::vector<uint8_t>& outputBytes, PPMHeader header, uint32_t antiguoNivel){
-    ColorChannels channels(static_cast<size_t>(header.width) * static_cast<size_t>(header.height));
+    ColorChannels const channels(static_cast<size_t>(header.width) * static_cast<size_t>(header.height));
 
     // Obtener referencias directas a los canales para evitar llamadas a métodos
     auto& reds = imageChannels.getRedChannel();
@@ -65,7 +65,7 @@ void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
     // Crear objeto ColorChannels para manejar los canales
     ColorChannels channels(static_cast<size_t>(header.width) * static_cast<size_t>(header.height));
     channels.extractFromBinary(fileData, header);
-    uint32_t antiguoNivel = header.maxColorValue;
+    uint32_t const antiguoNivel = header.maxColorValue;
     header.maxColorValue = maxLevel;
     std::vector<uint8_t> outputBytes;
 
