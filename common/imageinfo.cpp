@@ -6,6 +6,12 @@
 #include <stdexcept>
 #include <fstream>
 
+
+namespace {
+  const int MAX_COLOR_VALUE = 255;
+  const int BUFFER_SIZE = 256;
+}
+
 bool readPPMHeader(const std::string& inputFile, PPMHeader& header) {
     std::vector<uint8_t> fileData;
     try {
@@ -97,12 +103,12 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
     file >> width >> height >> maxColorValue;
     std::cout << "Width: " << width << ", Height: " << height << ", Max Color Value: " << maxColorValue << '\n';
 
-    if (width <= 0 || height <= 0 || maxColorValue != 255) {
+    if (width <= 0 || height <= 0 || maxColorValue != MAX_COLOR_VALUE) {
         throw std::runtime_error("Error: Dimensiones o valor máximo de color no válidos.");
     }
 
     // Skip the newline after the header
-    file.ignore(256, '\n');
+    file.ignore(BUFFER_SIZE, '\n');
 
     return {width, height};
 }
