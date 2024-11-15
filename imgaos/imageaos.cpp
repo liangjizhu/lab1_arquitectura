@@ -453,7 +453,7 @@ Image resizeImageAoS(const Image& image, int newWidth, int newHeight) {
 //Toma como parámetro de entrada el unordered map (llamado frecuencia) y el número de colores a seleccionar, y retorna el vector de los n colores menos frecuentes
 
 //NOLINTBEGIN(misc-no-recursion)
-const int MAX_COLOR_VALUE = 255;
+//const int MAX_COLOR_VALUE = 255;
 
 
 std::vector<Color> encontrar_colores_menos_frecuentes(const std::unordered_map<Color, int, HashColor>& frecuencia, int n) {

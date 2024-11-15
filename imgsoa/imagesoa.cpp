@@ -33,8 +33,8 @@
 
 // Constantes descriptivas
 constexpr uint16_t BYTE_MASK = 0xFF;
-constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
-constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
+//constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
+//constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 
