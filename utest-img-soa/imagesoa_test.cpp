@@ -140,6 +140,31 @@ TEST(ImageSoATest, AppendPixelIndicesSoA) {
 }
 /*********************************************  RESIZE  *************************************************/
 
+class ResizeTest : public ::testing::Test {
+  protected:
+  Image originalImage;
+
+  void SetUp() override {
+    // Example image data
+    std::vector<uint8_t> data = {255, 0, 0, 0, 255, 0, 0, 0, 255};
+    originalImage = vectorToImage(data, 1, 3, 3);  // Create an image with width=1, height=3, channels=3
+  }
+};
+
+// Example test case
+TEST_F(ResizeTest, ResizeWithInterpolation) {
+  Image resizedImage = resizeImageAoS(originalImage, 10, 10);
+
+  // Check resized image size
+  ASSERT_EQ(resizedImage.size(), 10);  // 10 rows
+  ASSERT_EQ(resizedImage[0].size(), 10);  // 10 columns
+
+  // Check if interpolation occurred (First pixel should not be identical to the original)
+  EXPECT_NE(resizedImage[0][0].r, 255);
+  EXPECT_NE(resizedImage[0][0].g, 0);
+  EXPECT_NE(resizedImage[0][0].b, 0);
+}
+
 
 
 /********************************************* CUTFREQ SOA *********************************************/

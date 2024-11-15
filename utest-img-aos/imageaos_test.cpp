@@ -131,6 +131,61 @@ TEST(ImageAosTest, CompressAoS) {
     EXPECT_EQ(removeOutput, 0);
 }
 /********************************************************************************************************/
+// Test class definition
+class ResizeTest : public ::testing::Test {
+  protected:
+  // Setup code: This will run before each test case.
+  void SetUp() override {
+    // Initialize a small test image (e.g., 3x3 image)
+    Image img = {{{255, 0, 0}, {0, 255, 0}, {0, 0, 255}},
+                 {{255, 255, 0}, {0, 255, 255}, {255, 0, 255}},
+                 {{0, 255, 255}, {255, 255, 255}, {0, 0, 0}}};
+    originalImage = img;
+  }
+
+  // Test image data (3x3 image for simplicity)
+  Image originalImage;
+};
+
+
+// Test case 1: Resize 3x3 image to 6x6
+TEST_F(ResizeTest, Resize3x3To6x6) {
+  Image resizedImage = resizeImageAoS(originalImage, 6, 6);
+
+  ASSERT_EQ(resizedImage.size(), 6);  // 6 rows
+  ASSERT_EQ(resizedImage[0].size(), 6);  // 6 columns
+
+  // Check the first few pixels to verify interpolation
+  EXPECT_EQ(resizedImage[0][0].r, 255);  // First pixel should be red
+  EXPECT_EQ(resizedImage[0][0].g, 0);  // First pixel should have no green
+  EXPECT_EQ(resizedImage[0][0].b, 0);  // First pixel should have no blue
+}
+
+// Test case 2: Resize 3x3 image to 2x2
+TEST_F(ResizeTest, Resize3x3To2x2) {
+  Image resizedImage = resizeImageAoS(originalImage, 2, 2);
+
+  ASSERT_EQ(resizedImage.size(), 2);  // 2 rows
+  ASSERT_EQ(resizedImage[0].size(), 2);  // 2 columns
+
+  // Check that resized image has valid pixels
+  EXPECT_EQ(resizedImage[0][0].r, 255);  // First pixel should be red
+  EXPECT_EQ(resizedImage[0][0].g, 0);  // First pixel should have no green
+  EXPECT_EQ(resizedImage[0][0].b, 0);  // First pixel should have no blue
+}
+
+// Test case 3: Resize 3x3 image to 3x3 (no resizing, should stay the same)
+TEST_F(ResizeTest, Resize3x3To3x3) {
+  Image resizedImage = resizeImageAoS(originalImage, 3, 3);
+
+  ASSERT_EQ(resizedImage.size(), 3);  // 3 rows
+  ASSERT_EQ(resizedImage[0].size(), 3);  // 3 columns
+
+  // Check that the resized image is the same as the original
+  EXPECT_EQ(resizedImage[0][0].r, 255);  // Check red channel of first pixel
+  EXPECT_EQ(resizedImage[0][0].g, 0);    // Check green channel of first pixel
+  EXPECT_EQ(resizedImage[0][0].b, 0);    // Check blue channel of first pixel
+}
 
 /********************************************* CUTFREQ AOS *********************************************/
 // Prueba para `encontrar_colores_menos_frecuentes`
