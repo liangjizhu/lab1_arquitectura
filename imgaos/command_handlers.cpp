@@ -40,7 +40,6 @@ int handleMaxLevel(const ProgramArgs& args) {
     return 0;
 }
 
-// Función para manejar el comando 'resize'
 int handleResize(const ProgramArgs& args) {
   if (!args.validateResize()) {
     std::cerr << args.getErrorMessage() << '\n';
