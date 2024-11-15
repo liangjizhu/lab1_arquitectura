@@ -4,13 +4,21 @@
 #include "color.hpp"
 #include "imageinfo.hpp"
 #include "progargs.hpp"
-
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
 #include <vector>
+/********************************************* MAX LEVEL AOS *********************************************/
+// Cambiar los componentes del color según la intensidad
+Color simpleToSimpleChangeLevel(Color inputColor, const uint32_t antiguoMaxLevel, uint16_t maxLevel);
 
-void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel);
+
+// Cambiar los colores al cambiar la intensidad de la imagen
+std::vector<Color> modifyMaxLevelInputPixels(const std::vector<Color>& inputColores, const uint32_t antiguoMaxLevel, uint16_t maxLevel);
+
+// Función principal para el escalado de intensidad en formato AOS
+void processMaxLevel(const FilePaths& paths, uint16_t maxLevel);
+/********************************************************************************************************/
 
 /********************************************* COMPRESS AOS *********************************************/
 // Extraer los píxeles de la imagen a partir de los datos binarios (fileData)
@@ -56,10 +64,6 @@ std::vector<Color> encontrarColoresCercanos(std::unique_ptr<KDNode>& root, const
 
 std::vector<Color> readPixelsFromImage(const std::string& inputFile, int width, int height);
 
-// Función para sustituir los colores menos frecuentes
-void substituteColors(std::vector<Color>& pixels,
-                     const std::vector<Color>& menosFrecuentes,
-                     std::unique_ptr<KDNode>& kdTreeRoot);
 struct ImageData {
     std::vector<Color> pixels;
     std::vector<Color> uniqueColors;

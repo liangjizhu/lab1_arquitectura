@@ -7,7 +7,8 @@ constexpr uint8_t BITS_PER_BYTE = 8;
 constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 //constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 constexpr uint8_t COLOR_COMPONENT_INDEX_BLUE_HIGH = 5; // Nueva constante para el índice del byte alto de azul (para el clang-tidy)
-
+constexpr int DESPLAZAMIENTO_8 = 8;
+constexpr int DESPLAZAMIENTO_16 = 16;
 // Constructor para inicializar los canales
 ColorChannels::ColorChannels(size_t size) {
     redChannel.reserve(size);
@@ -60,9 +61,9 @@ void ColorChannels::extractFromBinaryWithFrequency(
 
     // Llenar cada canal con los valores correspondientes y calcular la frecuencia de cada color
     for (size_t i = 0, j = 0; i < totalPixels; ++i, j += 3) {
-        uint16_t red = fileData[j];
-        uint16_t green = fileData[j + 1];
-        uint16_t blue = fileData[j + 2];
+        uint16_t const red = fileData[j];
+        uint16_t const green = fileData[j + 1];
+        uint16_t const blue = fileData[j + 2];
 
         // Almacenar en los canales
         redChannel[i] = red;
@@ -70,8 +71,8 @@ void ColorChannels::extractFromBinaryWithFrequency(
         blueChannel[i] = blue;
 
         // Combinar los valores RGB en un solo valor uint32_t
-        uint32_t combinedColor = (static_cast<uint32_t>(red) << 16) | 
-                                 (static_cast<uint32_t>(green) << 8) | 
+        uint32_t const combinedColor = (static_cast<uint32_t>(red) << DESPLAZAMIENTO_16) |
+                                 (static_cast<uint32_t>(green) << DESPLAZAMIENTO_8) |
                                  static_cast<uint32_t>(blue);
 
         // Actualizar la frecuencia del color en el mapa

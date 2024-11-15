@@ -6,11 +6,8 @@
 #include <stdexcept>
 #include <fstream>
 
-
-namespace {
-  const int MAX_COLOR_VALUE = 255;
-  const int BUFFER_SIZE = 256;
-}
+constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
+constexpr int NEW_LINE = 256;
 
 bool readPPMHeader(const std::string& inputFile, PPMHeader& header) {
     std::vector<uint8_t> fileData;
@@ -64,6 +61,12 @@ void processInfo(const std::string& inputFile) {
     }
 }
 
+std::string generateHeaderMaxlevel(const PPMHeader& header, int maxlevel) {
+    std::ostringstream headerStream;
+    headerStream << "P6\n" << header.width << " " << header.height << " " << maxlevel << "\n";
+    return headerStream.str();
+}
+
 // COMPRESS
 // Reutilizar: Generar encabezado del archivo comprimido
 std::string generateHeader(const PPMHeader& header, int colorTableSize) {
@@ -103,12 +106,12 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
     file >> width >> height >> maxColorValue;
     std::cout << "Width: " << width << ", Height: " << height << ", Max Color Value: " << maxColorValue << '\n';
 
-    if (width <= 0 || height <= 0 || maxColorValue != MAX_COLOR_VALUE) {
+    if (width <= 0 || height <= 0 || maxColorValue != MAX_COLOR_VALUE_8BIT) {
         throw std::runtime_error("Error: Dimensiones o valor máximo de color no válidos.");
     }
 
     // Skip the newline after the header
-    file.ignore(BUFFER_SIZE, '\n');
+    file.ignore(NEW_LINE, '\n');
 
     return {width, height};
 }

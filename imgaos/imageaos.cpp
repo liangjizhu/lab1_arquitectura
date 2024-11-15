@@ -23,75 +23,44 @@ constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 
-// TODO:
-//  - PARA ESTA OPERACIÓN CREO QUE SE PODRÍA OPTIMIZAR SI SE EJECUTA AL MISMO TIEMPO QUE SE LEA EL ARCHIVO
-//  - clang-tidy
-void processMaxLevel(std::vector<uint8_t> inputFile, int maxLevel) {
-  std::string buffer    = "";
-  int antiguaIntensidad = 0;
-  int ancho             = 0;
-  int anchoContador     = 0;
-  int contadorDeLineas  = 0;
+/********************************************* RESIZE AOS *********************************************/
+void modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels, std::vector<uint8_t>& output ,PPMHeader header, u_int32_t antiguoNivel){
+    Color aux;
+    for(const auto& pixel : inputPixels){
+        // Modificar pixel;
+        aux.rgb.red = static_cast<uint16_t>(uint32_t(pixel.rgb.red) * header.maxColorValue / antiguoNivel);
+        aux.rgb.green = static_cast<uint16_t>(uint32_t(pixel.rgb.green) * header.maxColorValue / antiguoNivel);
+        aux.rgb.blue = static_cast<uint16_t>(uint32_t(pixel.rgb.blue) * header.maxColorValue / antiguoNivel);
 
-  // const int maxIntensidadBaja = 256;
-  // int tipoConversion = 0; // Se podría usar 4 bits en vez de 8
-
-  std::vector<uint8_t> output = {};
-
-  // std::ofstream stream;
-  // stream.open("output1.ppm");
-  std::cout << "\nProcessing 'maxlevel' for file: " << inputFile.size() << " with max level: " << maxLevel << '\n';
-
-  // Leer archivo
-  for (auto i = inputFile.begin(); i != inputFile.end(); ++i) {
-    // Saltos de línea
-    if ((*i == '\n') && ((anchoContador == ancho) || (contadorDeLineas < 3))) {
-      // Añadir al output la nueva instensidad
-      if (contadorDeLineas == 2) {
-        // Extraer antigua intensidad
-        antiguaIntensidad = std::stoi(buffer);
-
-        // if ((antiguaIntensidad < maxIntensidadBaja) && (maxLevel < maxIntensidadBaja))
-
-        buffer = std::to_string(static_cast<int>(maxLevel));
-        for (auto j = buffer.begin(); j != buffer.end(); ++j) {
-          output.push_back(static_cast<unsigned char>(*j));
-        }
-      }
-
-      // Añadir al output
-      if (contadorDeLineas < 3) { output.push_back(static_cast<unsigned char>(*i)); }
-
-      // Aumentar contador de líneas
-      contadorDeLineas++;
-
-      // Reseatear buffer
-      buffer = "";
-
-    } else {
-      // Sacar ancho para analizar archivo
-      if (((ancho == 0) && (contadorDeLineas == 1)) || (contadorDeLineas == 2)) {
-        // Checkear si es el fin del ancho
-        if (*i == ' ') { ancho = std::stoi(buffer); }
-
-        // Añadir char al buffer
-        buffer.append(1, static_cast<char>(*i));
-      }
-
-      // Añadir al output
-      if (contadorDeLineas < 2) {
-        output.push_back(static_cast<unsigned char>(*i));
-      } else if (contadorDeLineas > 2) {
-        output.push_back(
-            static_cast<u_int8_t>((static_cast<int>(*i)) * maxLevel / antiguaIntensidad));
-      }
-
-      // Añadir ancho
-      anchoContador++;
+        aux.writeToBinary(output, header);
     }
-  }
+}
 
-  BinaryIO::writeBinaryFile("output.ppm", output);
+//Función principal para el escalado de intensidad en formato AOS
+void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
+    // Leer los datos binarios del archivo de entrada
+    const std::vector<uint8_t> fileData = BinaryIO::readBinaryFile(paths.inputFile);
+    if (fileData.empty()) {
+        std::cerr << "Error: No se pudo abrir o leer el archivo de entrada: " << maxLevel << '\n';
+        return;
+    }
+    // Leer el encabezado del archivo PPM
+    PPMHeader header{};
+    if (!readPPMHeader(paths.inputFile, header)) {
+        std::cerr << "Error al leer el encabezado del archivo PPM." << '\n';
+        return;
+    }
+    std::vector<Color> imagePixels = extractImagePixels(fileData, header);
+
+    uint32_t antiguoNivel = header.maxColorValue;
+    header.maxColorValue = maxLevel;
+    std::vector<uint8_t> outputBytes;
+
+    // Extraer los píxeles de la imagen a partir de los datos binarios
+    modifyMaxLevelInputPixels(imagePixels, outputBytes, header, antiguoNivel);
+
+    // Escribir
+    writePPM(paths.outputFile, outputBytes, header.width, header.height);
 }
 
 /********************************************* COMPRESS AOS *********************************************/
