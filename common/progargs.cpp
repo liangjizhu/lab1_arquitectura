@@ -6,6 +6,9 @@
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr size_t RESIZE_ARGUMENT_COUNT = 6;
 constexpr size_t MAX_LEVEL_ARGUMENT_COUNT = 5;
+constexpr size_t CUT_FREQ_ARGUMENT_COUNT = 5;
+constexpr size_t RESIZE_HEIGHT = 5;
+constexpr size_t RESIZE_WIDTH = 4;
 
 // Constructor para inicializar los argumentos usando std::vector<std::string>
 ProgramArgs::ProgramArgs(const std::vector<std::string>& arguments) : args(arguments) {}
@@ -99,7 +102,7 @@ bool ProgramArgs::validateResize() const{
 }
 
 bool ProgramArgs::validateCutFreq() const{
-    if (args.size() != 5) {
+    if (args.size() != CUT_FREQ_ARGUMENT_COUNT) {
         errorMessage = "Error: Invalid number of extra arguments for cutfreq";
         return false;
     }
@@ -146,7 +149,7 @@ int ProgramArgs::getMaxLevel() const {
 
 int ProgramArgs::getResizeWidth() const {
   try {
-    int width = std::stoi(args[4]);
+    int const width = std::stoi(args[RESIZE_WIDTH]);
     if (width <= 0) {
       std::cerr << "Error: Width must be positive.\n";
       return -1;
@@ -161,7 +164,7 @@ int ProgramArgs::getResizeWidth() const {
 
 int ProgramArgs::getResizeHeight() const {
   try {
-    int height = std::stoi(args[5]);
+    int const height = std::stoi(args[RESIZE_HEIGHT]);
     if (height <= 0) {
       std::cerr << "Error: Height must be positive.\n";
       return -1;
