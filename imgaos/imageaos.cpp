@@ -24,14 +24,17 @@ constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 
 /********************************************* MAXLEVEL AOS *********************************************/
-void modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels ,PPMHeader header, u_int32_t antiguoNivel){
+std::vector<Color> modifyMaxLevelInputPixels(const std::vector<Color> inputPixels ,PPMHeader header, u_int32_t antiguoNivel){
+    std::vector<Color> res;
     Color aux;
     for(const auto& pixel : inputPixels){
         // Modificar pixel;
         aux.rgb.red = static_cast<uint16_t>(uint32_t(pixel.rgb.red) * header.maxColorValue / antiguoNivel);
         aux.rgb.green = static_cast<uint16_t>(uint32_t(pixel.rgb.green) * header.maxColorValue / antiguoNivel);
         aux.rgb.blue = static_cast<uint16_t>(uint32_t(pixel.rgb.blue) * header.maxColorValue / antiguoNivel);
+        res.push_back(aux);
     }
+    return res;
 }
 
 //Función principal para el escalado de intensidad en formato AOS
@@ -54,10 +57,10 @@ void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
     header.maxColorValue = maxLevel;
 
     // Extraer los píxeles de la imagen a partir de los datos binarios
-    modifyMaxLevelInputPixels(imagePixels, header, antiguoNivel);
+    std::vector<Color> nuevosColores = modifyMaxLevelInputPixels(imagePixels, header, antiguoNivel);
 
     // Escribir
-    escribirPPM(paths.outputFile, imagePixels, header.width, header.height);
+    escribirPPM(paths.outputFile, nuevosColores, header.width, header.height);
 }
 
 /********************************************* COMPRESS AOS *********************************************/
