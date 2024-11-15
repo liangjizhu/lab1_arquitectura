@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <cstdint>
 #include <bit>
-#include <limits>
 
 static constexpr size_t COLOR_TABLE_RESERVE_SIZE = 256;
 

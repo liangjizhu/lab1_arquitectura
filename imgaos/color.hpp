@@ -35,9 +35,9 @@ class Color {
 struct HashColor {
     size_t operator()(const Color& color) const {
         // Combinamos los valores de los componentes RGB en un solo hash
-        size_t h1 = std::hash<uint16_t>{}(color.rgb.red);
-        size_t h2 = std::hash<uint16_t>{}(color.rgb.green);
-        size_t h3 = std::hash<uint16_t>{}(color.rgb.blue);
+        size_t const h1 = std::hash<uint16_t>{}(color.rgb.red);
+        size_t const h2 = std::hash<uint16_t>{}(color.rgb.green);
+        size_t const h3 = std::hash<uint16_t>{}(color.rgb.blue);
         
         // Usamos un patrón común de combinar hashes
         return h1 ^ (h2 << 1) ^ (h3 << 2);

@@ -6,6 +6,9 @@
 #include <stdexcept>
 #include <fstream>
 
+constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
+constexpr int NEW_LINE = 256;
+
 bool readPPMHeader(const std::string& inputFile, PPMHeader& header) {
     std::vector<uint8_t> fileData;
     try {
@@ -97,12 +100,12 @@ std::pair<int, int> getImageDimensions(const std::string& filename) {
     file >> width >> height >> maxColorValue;
     std::cout << "Width: " << width << ", Height: " << height << ", Max Color Value: " << maxColorValue << '\n';
 
-    if (width <= 0 || height <= 0 || maxColorValue != 255) {
+    if (width <= 0 || height <= 0 || maxColorValue != MAX_COLOR_VALUE_8BIT) {
         throw std::runtime_error("Error: Dimensiones o valor máximo de color no válidos.");
     }
 
     // Skip the newline after the header
-    file.ignore(256, '\n');
+    file.ignore(NEW_LINE, '\n');
 
     return {width, height};
 }

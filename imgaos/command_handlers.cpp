@@ -49,7 +49,7 @@ int handleResize(const ProgramArgs& args) {
     return -1;
   }
 
-  const int channels = 3;
+  constexpr int channels = 3;
   const Image originalImage = vectorToImage(rawData, originalWidth, originalHeight, channels);
   const Image resizedImage = resizeImageAoS(originalImage, width, height);
   const std::vector<uint8_t> resizedData = imageToVector(resizedImage, channels);
