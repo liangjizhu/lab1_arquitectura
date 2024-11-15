@@ -11,7 +11,7 @@ maxlevel_and_compare() {
     local expected="../expected-output/maxlevel/$2.cppm"
     local level=$3
 
-    echo "Ejecutando compresión para: $input"
+    echo "Ejecutando cambio de intensidad para: $input"
 
     # Ejecutar la modificación de intensidad
     ../build/imtool-aos/imtool-aos "../in/$input" "$output" maxlevel "$level"

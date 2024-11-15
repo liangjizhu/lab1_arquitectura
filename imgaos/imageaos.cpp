@@ -23,16 +23,14 @@ constexpr uint16_t MAX_COLOR_VALUE_8BIT = 255;
 constexpr uint16_t MAX_COLOR_VALUE_16BIT = 65535;
 constexpr uint8_t BITS_PER_BYTE = 8;
 
-/********************************************* RESIZE AOS *********************************************/
-void modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels, std::vector<uint8_t>& output ,PPMHeader header, u_int32_t antiguoNivel){
+/********************************************* MAXLEVEL AOS *********************************************/
+void modifyMaxLevelInputPixels(const std::vector<Color>& inputPixels ,PPMHeader header, u_int32_t antiguoNivel){
     Color aux;
     for(const auto& pixel : inputPixels){
         // Modificar pixel;
         aux.rgb.red = static_cast<uint16_t>(uint32_t(pixel.rgb.red) * header.maxColorValue / antiguoNivel);
         aux.rgb.green = static_cast<uint16_t>(uint32_t(pixel.rgb.green) * header.maxColorValue / antiguoNivel);
         aux.rgb.blue = static_cast<uint16_t>(uint32_t(pixel.rgb.blue) * header.maxColorValue / antiguoNivel);
-
-        aux.writeToBinary(output, header);
     }
 }
 
@@ -54,13 +52,12 @@ void processMaxLevel(const FilePaths& paths, uint16_t maxLevel){
 
     uint32_t antiguoNivel = header.maxColorValue;
     header.maxColorValue = maxLevel;
-    std::vector<uint8_t> outputBytes;
 
     // Extraer los píxeles de la imagen a partir de los datos binarios
-    modifyMaxLevelInputPixels(imagePixels, outputBytes, header, antiguoNivel);
+    modifyMaxLevelInputPixels(imagePixels, header, antiguoNivel);
 
     // Escribir
-    writePPM(paths.outputFile, outputBytes, header.width, header.height);
+    escribirPPM(paths.outputFile, imagePixels, header.width, header.height);
 }
 
 /********************************************* COMPRESS AOS *********************************************/
@@ -310,7 +307,6 @@ void escribirPPM(const std::string& filename, const std::vector<Color>& pixeles,
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) {
         std::cout << "Error: No se pudo abrir el archivo para escribir: " << filename << '\n';
-        std::cerr << "Error: No se pudo abrir el archivo para escribir: " << filename << '\n';
         return;
     }
 

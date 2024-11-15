@@ -222,9 +222,29 @@ TEST(CutFreqTests, TestPrepareRemainingColors) {
 }
 /********************************************************************************************************/
 
-// TODO
-// MAX LEVEL
-// ARGS RESIZE
+/********************************************* MAXLEVEL AOS *********************************************/
+//TEST(MaxLevelTests, TestCambioDeNivel) {
+    //std::vector<Color> colores = {
+        //Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        //Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        //Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
+    //};
+    //constexpr PPMHeader header{2, 2, MAX_COLOR_VALUE_8BIT};
+    //modifyMaxLevelInputPixels(colores, header.maxColorValue, 100);
+    //Color const target(RGBColor{15, 25, 35});
+
+    //std::vector<Color> coloress = {
+        //Color(RGBColor{10, 20, 30}), // NOLINT(*-avoid-magic-numbers)
+        //Color(RGBColor{40, 50, 60}), // NOLINT(*-avoid-magic-numbers)
+        //Color(RGBColor{70, 80, 90}) // NOLINT(*-avoid-magic-numbers)
+    //};
+
+    //EXPECT_EQ(colores, Color(RGBColor{10, 20, 30}));
+//}
+/********************************************************************************************************/
+
+/********************************************* CUTFREQ AOS *********************************************/
+
 TEST(VectorToImageTest, ConvertsDataToImageSuccessfully) {
     // Sample 3x3 image data, RGB channels
     std::vector<uint8_t> data = {255, 0, 0, 0, 255, 0, 0, 0, 255,
