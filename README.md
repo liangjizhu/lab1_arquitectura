@@ -1,4 +1,4 @@
-# lab1_arquitectura
+# Programación Orientada Al Rendimiento
 ## Integrantes
 - Liang Ji Zhu -> compress, info
 - Victoria Guzmán Clemente -> cutfreq
